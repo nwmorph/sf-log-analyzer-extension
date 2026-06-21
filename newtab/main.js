@@ -1658,7 +1658,17 @@ function showLineDetail(el) {
     el.classList.remove('segment-selected');
   });
   detailBox.querySelector('.detail-open-btn')?.addEventListener('click', () => {
-    vscode.postMessage({ type: 'openLine', lineIndex: startIdx });
+    // In the browser, scroll the log lines section into view
+    const logLinesSection = detailBox.querySelector('.detail-log-lines');
+    if (logLinesSection) {
+      logLinesSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Highlight the first line briefly
+      const firstLine = logLinesSection.querySelector('.detail-log-line');
+      if (firstLine) {
+        firstLine.style.background = 'var(--vscode-editor-selectionBackground)';
+        setTimeout(() => { firstLine.style.background = ''; }, 1500);
+      }
+    }
   });
   detailBox.querySelector('.detail-query-copy')?.addEventListener('click', (ev) => {
     const pre = detailBox.querySelector('.detail-query-full');
