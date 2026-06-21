@@ -5,12 +5,8 @@ let appOrgUrl = null;
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.session.get('orgUrl');
-  if (stored.orgUrl) {
-    appOrgUrl = stored.orgUrl;
-    updateOrgDisplay(stored.orgUrl);
-    loadLogList();
-  }
+  // Always try to load logs on open — no need to press Refresh manually
+  loadLogList();
 
   document.getElementById('btn-refresh').addEventListener('click', () => {
     loadLogList();

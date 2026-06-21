@@ -82,6 +82,7 @@ function renderLogSummary(text, label, orgUrl, mtime) {
       <button class="tab-btn active" data-tab="timeline">Timeline</button>
       <button class="tab-btn" data-tab="scan">Code Scan ${result.scanFindings.filter(f => f.severity === 'critical').length > 0 ? `<span class="tab-badge tab-badge-critical">${result.scanFindings.filter(f => f.severity === 'critical').length}</span>` : result.scanFindings.length > 0 ? `<span class="tab-badge">${result.scanFindings.length}</span>` : ''}</button>
       <button class="tab-btn" data-tab="report">Report</button>
+      <button class="tab-btn" data-tab="raw">Raw Log</button>
     </div>
 
     <div class="tab-panel active" id="tab-timeline">
@@ -98,6 +99,15 @@ function renderLogSummary(text, label, orgUrl, mtime) {
 
     <div class="tab-panel" id="tab-report">
       ${renderReport(result)}
+    </div>
+
+    <div class="tab-panel" id="tab-raw">
+      <div class="raw-log-toolbar">
+        <input type="text" class="raw-log-search" id="raw-log-search" placeholder="Filter lines…" />
+        <span class="raw-log-count" id="raw-log-count"></span>
+        <button class="sidebar-btn" id="raw-log-copy">Copy all</button>
+      </div>
+      <pre class="raw-log-pre" id="raw-log-pre">${escapeHtml(text)}</pre>
     </div>
 
     <div id="span-tooltip" class="span-tooltip" style="display:none;"></div>
@@ -1108,6 +1118,41 @@ function attachInteractionHandlers() {
       if (panel) panel.classList.add('active');
     });
   });
+
+  // Raw log: filter and copy
+  const rawSearch = document.getElementById('raw-log-search');
+  const rawPre    = document.getElementById('raw-log-pre');
+  const rawCount  = document.getElementById('raw-log-count');
+  const rawCopy   = document.getElementById('raw-log-copy');
+
+  if (rawSearch && rawPre) {
+    const allLines = rawPre.textContent.split('\n');
+    const updateCount = (visible) => {
+      if (rawCount) rawCount.textContent = visible === allLines.length ? `${allLines.length} lines` : `${visible} / ${allLines.length} lines`;
+    };
+    updateCount(allLines.length);
+
+    rawSearch.addEventListener('input', () => {
+      const q = rawSearch.value.trim().toLowerCase();
+      if (!q) {
+        rawPre.textContent = allLines.join('\n');
+        updateCount(allLines.length);
+        return;
+      }
+      const filtered = allLines.filter(l => l.toLowerCase().includes(q));
+      rawPre.textContent = filtered.join('\n');
+      updateCount(filtered.length);
+    });
+  }
+
+  if (rawCopy && rawPre) {
+    rawCopy.addEventListener('click', () => {
+      navigator.clipboard.writeText(rawPre.textContent).then(() => {
+        rawCopy.textContent = 'Copied!';
+        setTimeout(() => { rawCopy.textContent = 'Copy all'; }, 1500);
+      }).catch(() => {});
+    });
+  }
 
   // Collapsible panels
   document.querySelectorAll('.collapsible-header').forEach((btn) => {
