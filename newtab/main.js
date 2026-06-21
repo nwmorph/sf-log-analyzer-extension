@@ -883,7 +883,7 @@ function renderPointStrip(pointEvents, timelineStart, totalMs, firstNanosRef) {
     const parts = ev.line.split('|');
     const msg   = parts.slice(3).join('|').trim().substring(0, 120);
     const label = isError ? (msg || ev.category) : 'Debug';
-    return `<div class="tl-point-marker tl-cat-errors ${isError ? 'tl-point-error' : 'tl-point-debug'}"
+    return `<div class="tl-point-marker ${isError ? 'tl-cat-errors tl-point-error' : 'tl-cat-debug tl-point-debug'}"
          style="position:absolute;left:${leftPct.toFixed(3)}%;top:0;bottom:0;"
          data-line-index="${ev.lineIndex}"
          data-label="${escapeHtml(label)}"
@@ -1038,9 +1038,16 @@ function renderTimeline(events, flowNames) {
               ${escapeHtml(meta.label)}
             </button>`;
   }).join('');
-  const errFilterBtn = pointEvents.length > 0
+  const errorEvents = pointEvents.filter(e => e.category === 'FATAL_ERROR' || e.category === 'EXCEPTION_THROWN');
+  const debugEvents = pointEvents.filter(e => e.category === 'USER_DEBUG');
+  const errFilterBtn = errorEvents.length > 0
     ? `<button class="tl-filter-btn" data-filter="errors" style="--filter-color:#d94545;">
-         <span class="tl-filter-dot" style="background:#d94545;"></span>Errors / Debug
+         <span class="tl-filter-dot" style="background:#d94545;"></span>Errors (${errorEvents.length})
+       </button>`
+    : '';
+  const debugFilterBtn = debugEvents.length > 0
+    ? `<button class="tl-filter-btn" data-filter="debug" style="--filter-color:#888;">
+         <span class="tl-filter-dot" style="background:#888;"></span>Debug (${debugEvents.length})
        </button>`
     : '';
 
@@ -1052,7 +1059,7 @@ function renderTimeline(events, flowNames) {
 
   return `
     <div class="timeline-container" id="timeline-root">
-      <div class="tl-filters">${filterBtns}${errFilterBtn}
+      <div class="tl-filters">${filterBtns}${errFilterBtn}${debugFilterBtn}
         <button class="tl-filter-btn tl-filter-all active" data-filter="all">Show all</button>
       </div>
       <div class="tl-overview-label">Overview <span class="tl-click-hint">— click a block to expand</span></div>
@@ -1066,7 +1073,8 @@ function renderTimeline(events, flowNames) {
         </div>
         <div class="tl-zoom-hint" id="tl-gantt-zoom-hint" style="display:none;">Pinch or Ctrl+scroll to zoom · Scroll to pan · Double-click to reset</div>
       </div>
-      ${pointEvents.length > 0 ? `<div class="tl-points-label">Errors &amp; Exceptions</div>${pointStripHtml}` : ''}
+      ${errorEvents.length > 0 ? `<div class="tl-points-label tl-points-label-error">Errors &amp; Exceptions (${errorEvents.length})</div>${renderPointStrip(errorEvents, timelineStart, totalMs, firstNanosRef)}` : ''}
+      ${debugEvents.length > 0 ? `<div class="tl-points-label">Debug statements (${debugEvents.length})</div>${renderPointStrip(debugEvents, timelineStart, totalMs, firstNanosRef)}` : ''}
       <div id="tl-line-detail" class="tl-line-detail" style="display:none;"></div>
       <div class="timeline-axis">
         <span class="axis-start">${startTime}</span>
