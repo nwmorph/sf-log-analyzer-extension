@@ -2659,13 +2659,21 @@ body {
   border-right: 1px solid var(--vscode-editorWidget-border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
   width: 320px;
   min-width: 200px;
   max-width: 600px;
   resize: horizontal;
   flex-shrink: 0;
+  cursor: e-resize;
 }
+
+/* Restore normal cursor inside sidebar content */
+.log-sidebar * { cursor: default; }
+.log-sidebar button,
+.log-sidebar .log-row,
+.log-sidebar label,
+.log-sidebar input { cursor: pointer; }
 
 .sidebar-header {
   padding: 14px 16px 10px;

@@ -1212,9 +1212,23 @@ function attachInteractionHandlers() {
 
       el.classList.add('overview-active');
       detailEl.style.display = 'block';
-      if (detailLabel) detailLabel.textContent = label + ' — detail';
 
-      const activeFilter = document.querySelector('.tl-filter-btn.active')?.getAttribute('data-filter') || 'all';
+      // When clicking an overview block, switch the filter to match that phase
+      // so the gantt shows the right category (not whatever was filtered before)
+      if (phase && phase !== 'gap') {
+        document.querySelectorAll('.tl-filter-btn').forEach(b => b.classList.remove('active'));
+        const matchingBtn = document.querySelector(`.tl-filter-btn[data-filter="${phase}"]`);
+        if (matchingBtn) {
+          matchingBtn.classList.add('active');
+        } else {
+          // No matching filter button — fall back to show all
+          document.querySelector('.tl-filter-all')?.classList.add('active');
+        }
+      }
+
+      const activeFilter = phase && phase !== 'gap'
+        ? phase
+        : (document.querySelector('.tl-filter-btn.active')?.getAttribute('data-filter') || 'all');
       let highlightCount = 0;
       detailEl.querySelectorAll('.timeline-segment').forEach(seg => {
         const segStart   = parseFloat(seg.getAttribute('data-start') || '0');
