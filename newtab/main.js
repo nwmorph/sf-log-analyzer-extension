@@ -797,19 +797,28 @@ function classifyCodeUnitName(rawName) {
   return 'other';
 }
 
+// Darker shades for light mode (same hue, lower lightness for readability)
+const PHASE_COLORS_DARK  = { 'before-trigger':'#3ca0c8','after-trigger':'#e07b39','validation':'#c8960a','flow':'#9b7fe8','trigger':'#4a9eff','soql':'#2eb87e','dml':'#8878c8','datasource':'#5ca0c8','method':'#4a9eff','system-method':'#4ecdc4','workflow':'#c8a050','other':'#888' };
+const PHASE_COLORS_LIGHT = { 'before-trigger':'#0077aa','after-trigger':'#c05a1a','validation':'#8a6200','flow':'#6040c0','trigger':'#0057cc','soql':'#006e44','dml':'#5040a0','datasource':'#004f88','method':'#0057cc','system-method':'#007a72','workflow':'#7a5a00','other':'#555' };
+
+function phaseColor(type) {
+  const isLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  return (isLight ? PHASE_COLORS_LIGHT : PHASE_COLORS_DARK)[type] || '#888';
+}
+
 const PHASE_META = {
-  'before-trigger': { label: 'Before Trigger',  color: '#3ca0c8', show: true },
-  'after-trigger':  { label: 'After Trigger',   color: '#e07b39', show: true },
-  'validation':     { label: 'Validation',       color: '#f0c040', show: true },
-  'flow':           { label: 'Flow',             color: '#9b7fe8', show: true },
-  'trigger':        { label: 'Trigger',          color: '#4a9eff', show: true },
-  'soql':           { label: 'SOQL',             color: '#2eb87e', show: true },
-  'dml':            { label: 'DML',              color: '#aa96da', show: true },
-  'datasource':     { label: 'Data Source',      color: '#5ca0c8', show: true },
-  'method':         { label: 'Apex Method',      color: '#4a9eff', show: true },
-  'system-method':  { label: 'System Method',    color: '#4ecdc4', show: true },
-  'workflow':       { label: 'Workflow',         color: '#c8a050', show: false },
-  'other':          { label: 'Other',            color: '#3a3a3a', show: true  },
+  'before-trigger': { label: 'Before Trigger',  get color() { return phaseColor('before-trigger'); }, show: true },
+  'after-trigger':  { label: 'After Trigger',   get color() { return phaseColor('after-trigger');  }, show: true },
+  'validation':     { label: 'Validation',       get color() { return phaseColor('validation');     }, show: true },
+  'flow':           { label: 'Flow',             get color() { return phaseColor('flow');           }, show: true },
+  'trigger':        { label: 'Trigger',          get color() { return phaseColor('trigger');        }, show: true },
+  'soql':           { label: 'SOQL',             get color() { return phaseColor('soql');           }, show: true },
+  'dml':            { label: 'DML',              get color() { return phaseColor('dml');            }, show: true },
+  'datasource':     { label: 'Data Source',      get color() { return phaseColor('datasource');     }, show: true },
+  'method':         { label: 'Apex Method',      get color() { return phaseColor('method');         }, show: true },
+  'system-method':  { label: 'System Method',    get color() { return phaseColor('system-method');  }, show: true },
+  'workflow':       { label: 'Workflow',         get color() { return phaseColor('workflow');        }, show: false },
+  'other':          { label: 'Other',            get color() { return phaseColor('other');           }, show: true  },
 };
 
 function buildOverviewPhases(spans) {

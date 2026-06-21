@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SF Log Analyzer</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Inline to ensure it loads before any FOUC */
+    .sidebar-resizer {
+      width: 6px;
+      flex-shrink: 0;
+      cursor: col-resize !important;
+      background: #c0c0c0;
+      transition: background 0.15s;
+      z-index: 100;
+    }
+    .sidebar-resizer:hover { background: #0066b8; }
+  </style>
 </head>
 <body>
   <div class="ext-layout" id="ext-layout">
 
-    <!-- Left sidebar: log list -->
     <aside class="log-sidebar" id="log-sidebar">
       <div class="sidebar-header">
         <div class="sidebar-title">
@@ -47,10 +58,8 @@
       </table>
     </aside>
 
-    <!-- Drag handle between sidebar and main (outside both, positioned by JS) -->
-    <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize"></div>
+    <div id="sidebar-resizer" class="sidebar-resizer"></div>
 
-    <!-- Main content: analyzer -->
     <main class="analyzer-main">
       <div class="page">
         <section id="summary" class="summary empty">
@@ -68,36 +77,38 @@
   <script src="main.js"></script>
   <script src="app.js"></script>
   <script>
-    // Sidebar drag-to-resize
-    const resizer = document.getElementById('sidebar-resizer');
-    const sidebar = document.getElementById('log-sidebar');
-    let isResizing = false;
-    let startX = 0;
-    let startWidth = 0;
+    (function() {
+      const resizer = document.getElementById('sidebar-resizer');
+      const sidebar = document.getElementById('log-sidebar');
+      let active = false;
+      let startX = 0;
+      let startW = 0;
 
-    resizer.addEventListener('mousedown', (e) => {
-      isResizing = true;
-      startX = e.clientX;
-      startWidth = sidebar.offsetWidth;
-      resizer.classList.add('dragging');
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
+      resizer.addEventListener('mousedown', function(e) {
+        active = true;
+        startX = e.clientX;
+        startW = sidebar.getBoundingClientRect().width;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.pointerEvents = 'none';
+        resizer.style.pointerEvents = 'auto';
+        e.preventDefault();
+        e.stopPropagation();
+      });
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isResizing) return;
-      const newWidth = Math.min(600, Math.max(180, startWidth + (e.clientX - startX)));
-      sidebar.style.width = newWidth + 'px';
-    });
+      window.addEventListener('mousemove', function(e) {
+        if (!active) return;
+        const w = Math.min(700, Math.max(180, startW + e.clientX - startX));
+        sidebar.style.width = w + 'px';
+      });
 
-    document.addEventListener('mouseup', () => {
-      if (!isResizing) return;
-      isResizing = false;
-      resizer.classList.remove('dragging');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    });
+      window.addEventListener('mouseup', function() {
+        if (!active) return;
+        active = false;
+        document.body.style.cursor = '';
+        document.body.style.pointerEvents = '';
+        resizer.style.pointerEvents = '';
+      });
+    })();
   </script>
 </body>
 </html>
