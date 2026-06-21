@@ -11,6 +11,7 @@
 
     <!-- Left sidebar: log list -->
     <aside class="log-sidebar" id="log-sidebar">
+      <div class="sidebar-resizer" id="sidebar-resizer"></div>
       <div class="sidebar-header">
         <div class="sidebar-title">
           <span class="sidebar-logo">⚡</span>
@@ -64,5 +65,37 @@
 
   <script src="main.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Sidebar drag-to-resize
+    const resizer = document.getElementById('sidebar-resizer');
+    const sidebar = document.getElementById('log-sidebar');
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = sidebar.offsetWidth;
+      resizer.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const newWidth = Math.min(600, Math.max(180, startWidth + (e.clientX - startX)));
+      sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  </script>
 </body>
 </html>

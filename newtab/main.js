@@ -1301,6 +1301,14 @@ function attachInteractionHandlers() {
         seg.style.visibility = visible ? 'visible' : 'hidden';
         seg.style.pointerEvents = visible ? 'auto' : 'none';
       });
+      // Show/hide error and debug strips based on filter
+      const showErrors = filter === 'all' || filter === 'errors';
+      const showDebug  = filter === 'all' || filter === 'debug';
+      document.querySelectorAll('.tl-points-label, .tl-point-strip').forEach(el => {
+        const isErrorSection = el.classList.contains('tl-points-label-error') ||
+          (el.previousElementSibling && el.previousElementSibling.classList.contains('tl-points-label-error'));
+        el.style.display = isErrorSection ? (showErrors ? '' : 'none') : (showDebug ? '' : 'none');
+      });
     });
   });
 
