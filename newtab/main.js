@@ -797,8 +797,8 @@ function classifyCodeUnitName(rawName) {
   return 'other';
 }
 
-// Darker shades for light mode (same hue, lower lightness for readability)
-const PHASE_COLORS_DARK  = { 'before-trigger':'#3ca0c8','after-trigger':'#e07b39','validation':'#c8960a','flow':'#9b7fe8','trigger':'#4a9eff','soql':'#2eb87e','dml':'#8878c8','datasource':'#5ca0c8','method':'#4a9eff','system-method':'#4ecdc4','workflow':'#c8a050','other':'#888' };
+// Original bright colours for dark mode; darker shades for light mode readability
+const PHASE_COLORS_DARK  = { 'before-trigger':'#3ca0c8','after-trigger':'#e07b39','validation':'#f0c040','flow':'#9b7fe8','trigger':'#4a9eff','soql':'#2eb87e','dml':'#aa96da','datasource':'#5ca0c8','method':'#4a9eff','system-method':'#4ecdc4','workflow':'#c8a050','other':'#666' };
 const PHASE_COLORS_LIGHT = { 'before-trigger':'#0077aa','after-trigger':'#c05a1a','validation':'#8a6200','flow':'#6040c0','trigger':'#0057cc','soql':'#006e44','dml':'#5040a0','datasource':'#004f88','method':'#0057cc','system-method':'#007a72','workflow':'#7a5a00','other':'#555' };
 
 function phaseColor(type) {
@@ -1210,6 +1210,10 @@ function attachInteractionHandlers() {
         seg.style.visibility = '';
         seg.style.pointerEvents = '';
       });
+      // Close span detail panel when switching overview blocks
+      const lineDetail = document.getElementById('tl-line-detail');
+      if (lineDetail) { lineDetail.style.display = 'none'; lineDetail.removeAttribute('data-for'); }
+      document.querySelectorAll('.segment-selected').forEach(s => s.classList.remove('segment-selected'));
 
       if (wasActive) {
         detailEl.style.display = 'none';
@@ -1548,8 +1552,8 @@ function showLineDetail(el) {
       }).join('')
     : '<p class="muted" style="margin:0">No log lines available — log was not loaded from a file.</p>';
 
-  const openBtn = startIdx >= 0
-    ? `<button class="detail-open-btn" data-line-index="${startIdx}">Open log</button>`
+  const openBtn = lineSlice.length > 0
+    ? `<button class="detail-open-btn" data-line-index="${startIdx}">Copy lines</button>`
     : '';
 
   // Find source reference: for SOQL spans, use the bracket line number from the SOQL line
@@ -1641,18 +1645,15 @@ function showLineDetail(el) {
     detailBox.style.display = 'none';
     el.classList.remove('segment-selected');
   });
-  detailBox.querySelector('.detail-open-btn')?.addEventListener('click', () => {
-    // In the browser, scroll the log lines section into view
-    const logLinesSection = detailBox.querySelector('.detail-log-lines');
-    if (logLinesSection) {
-      logLinesSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      // Highlight the first line briefly
-      const firstLine = logLinesSection.querySelector('.detail-log-line');
-      if (firstLine) {
-        firstLine.style.background = 'var(--vscode-editor-selectionBackground)';
-        setTimeout(() => { firstLine.style.background = ''; }, 1500);
-      }
-    }
+  detailBox.querySelector('.detail-open-btn')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    const lines = [...detailBox.querySelectorAll('.detail-line')]
+      .map(el => el.querySelector('.detail-line-text')?.textContent || '')
+      .join('\n');
+    navigator.clipboard.writeText(lines).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy lines'; }, 1500);
+    }).catch(() => {});
   });
   detailBox.querySelector('.detail-query-copy')?.addEventListener('click', (ev) => {
     const pre = detailBox.querySelector('.detail-query-full');
