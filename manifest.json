@@ -17,8 +17,10 @@
     "https://*.force.com/*",
     "https://*.lightning.force.com/*",
     "https://*.my.salesforce.com/*",
+    "https://*.sandbox.my.salesforce.com/*",
     "https://*.develop.my.salesforce.com/*",
-    "https://*.scratch.my.salesforce.com/*"
+    "https://*.scratch.my.salesforce.com/*",
+    "https://*.visual.force.com/*"
   ],
 
   "background": {

@@ -44,18 +44,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+function toApiUrl(orgUrl) {
+  // Convert Lightning UI URL to REST API base URL
+  // e.g. https://myorg.sandbox.lightning.force.com → https://myorg.sandbox.my.salesforce.com
+  // e.g. https://myorg.lightning.force.com         → https://myorg.my.salesforce.com
+  try {
+    const url = new URL(orgUrl);
+    const host = url.hostname;
+    // Lightning force.com → my.salesforce.com
+    if (host.endsWith('.lightning.force.com')) {
+      const sub = host.replace('.lightning.force.com', '');
+      return `https://${sub}.my.salesforce.com`;
+    }
+    // visualforce.com → my.salesforce.com (e.g. myorg.visual.force.com)
+    if (host.endsWith('.visual.force.com')) {
+      const sub = host.replace('.visual.force.com', '');
+      return `https://${sub}.my.salesforce.com`;
+    }
+    // Already a good API URL
+    return orgUrl;
+  } catch {
+    return orgUrl;
+  }
+}
+
 async function getSessionToken(orgUrl) {
-  // Salesforce stores the session in the 'sid' cookie
-  const cookie = await chrome.cookies.get({ url: orgUrl, name: 'sid' });
-  if (cookie) return cookie.value;
-  // Fallback: try 'sidCommunity' for Experience Cloud
-  const fallback = await chrome.cookies.get({ url: orgUrl, name: 'sidCommunity' });
-  if (fallback) return fallback.value;
-  throw new Error('Not logged in to this Salesforce org. Please log in and try again.');
+  // Try the API URL domain first (sid lives on my.salesforce.com, not lightning.force.com)
+  const apiUrl = toApiUrl(orgUrl);
+  const candidateUrls = apiUrl !== orgUrl ? [apiUrl, orgUrl] : [orgUrl];
+
+  for (const url of candidateUrls) {
+    const cookie = await chrome.cookies.get({ url, name: 'sid' });
+    if (cookie) return cookie.value;
+    const fallback = await chrome.cookies.get({ url, name: 'sidCommunity' });
+    if (fallback) return fallback.value;
+  }
+  throw new Error('Not logged in to this Salesforce org, or session has expired. Please log in and try again.');
 }
 
 async function fetchLogs(orgUrl) {
   const sid = await getSessionToken(orgUrl);
+  orgUrl = toApiUrl(orgUrl);
   const query = encodeURIComponent(
     `SELECT Id, LogUser.Name, Application, Operation, Request, StartTime, Status, LogLength, DurationMilliseconds
      FROM ApexLog
@@ -78,6 +107,7 @@ async function fetchLogs(orgUrl) {
 
 async function fetchLogBody(orgUrl, logId) {
   const sid = await getSessionToken(orgUrl);
+  orgUrl = toApiUrl(orgUrl);
   const url = `${orgUrl}/services/data/${API_VERSION}/tooling/sobjects/ApexLog/${logId}/Body`;
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${sid}` }
@@ -91,6 +121,7 @@ async function fetchLogBody(orgUrl, logId) {
 
 async function deleteLog(orgUrl, logId) {
   const sid = await getSessionToken(orgUrl);
+  orgUrl = toApiUrl(orgUrl);
   const url = `${orgUrl}/services/data/${API_VERSION}/tooling/sobjects/ApexLog/${logId}`;
   const res = await fetch(url, {
     method: 'DELETE',
