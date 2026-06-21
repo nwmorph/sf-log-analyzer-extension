@@ -47,10 +47,26 @@ async function loadLogList() {
   const stateEl = document.getElementById('log-list-state');
   const tableEl = document.getElementById('log-table');
 
-  const stored = await chrome.storage.session.get('orgUrl');
-  if (stored.orgUrl) {
-    currentOrgUrl = stored.orgUrl;
-    updateOrgDisplay(stored.orgUrl);
+  // First try: query open tabs directly — more reliable than waiting for content script
+  const sfOrgPattern = /https:\/\/[^/]+(\.salesforce\.com|\.force\.com|\.lightning\.force\.com|\.my\.salesforce\.com)(\/|$)/;
+  const allTabs = await chrome.tabs.query({});
+  const sfTab = allTabs.find(t => t.url && sfOrgPattern.test(t.url));
+  if (sfTab) {
+    try {
+      const origin = new URL(sfTab.url).origin;
+      currentOrgUrl = origin;
+      await chrome.storage.session.set({ orgUrl: origin });
+      updateOrgDisplay(origin);
+    } catch {}
+  }
+
+  // Second try: fall back to session storage
+  if (!currentOrgUrl) {
+    const stored = await chrome.storage.session.get('orgUrl');
+    if (stored.orgUrl) {
+      currentOrgUrl = stored.orgUrl;
+      updateOrgDisplay(stored.orgUrl);
+    }
   }
 
   if (!currentOrgUrl) {
