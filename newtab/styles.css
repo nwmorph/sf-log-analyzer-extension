@@ -1770,6 +1770,16 @@ button {
 
 .scan-resource-link:hover { text-decoration: underline; }
 
+.scan-line-ref {
+  font-size: 0.72rem;
+  font-family: monospace;
+  color: var(--vscode-descriptionForeground);
+  margin-left: auto;
+  padding: 2px 6px;
+  background: color-mix(in srgb, var(--vscode-editorWidget-border) 30%, transparent);
+  border-radius: 3px;
+}
+
 /* Timeline filters */
 .tl-filters {
   display: flex;

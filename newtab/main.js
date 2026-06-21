@@ -1119,29 +1119,18 @@ function attachInteractionHandlers() {
     });
   });
 
-  // Code scan findings -> open in editor
+  // Code scan findings: hide "Open in log" buttons (no editor in browser)
   document.querySelectorAll('.scan-open-btn[data-line-index]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const idx = btn.getAttribute('data-line-index');
-      if (idx != null) vscode.postMessage({ type: 'openLine', lineIndex: Number(idx) });
-    });
+    btn.style.display = 'none';
   });
 
-  // Narrative step rows -> open in editor
+  // Narrative step rows: remove pointer cursor (can't open editor)
   document.querySelectorAll('.narr-step[data-line-index]').forEach((el) => {
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', () => {
-      const idx = el.getAttribute('data-line-index');
-      if (idx != null) vscode.postMessage({ type: 'openLine', lineIndex: Number(idx) });
-    });
+    el.style.cursor = '';
   });
 
-  // Validation rule rows -> open in editor + formula tooltip
+  // Validation rule rows: keep tooltip but remove editor click
   document.querySelectorAll('.vr-row').forEach((el) => {
-    el.addEventListener('click', () => {
-      const idx = el.getAttribute('data-line-index');
-      if (idx != null) vscode.postMessage({ type: 'openLine', lineIndex: Number(idx) });
-    });
 
     const formula = el.getAttribute('data-formula');
     if (formula && tooltip) {
@@ -1151,7 +1140,7 @@ function attachInteractionHandlers() {
           <div class="tooltip-type">Validation Formula</div>
           <div class="tooltip-name">${escapeHtml(name)}</div>
           <div class="tooltip-formula">${escapeHtml(formula)}</div>
-          <div class="tooltip-hint">Click to see raw log lines</div>`;
+          `;
         tooltip.style.display = 'block';
         positionTooltip(ev, tooltip);
       });
@@ -1552,14 +1541,9 @@ function showLineDetail(el) {
 
   const linesHtml = lineSlice.length > 0
     ? lineSlice.map(l => {
-        const sourceInfo = extractSourceInfo(l.text);
-        const sourceBtn = sourceInfo
-          ? `<button class="detail-src-btn" data-class="${escapeHtml(sourceInfo.className)}" data-line="${sourceInfo.lineNumber}" title="Open ${escapeHtml(sourceInfo.className)}.cls at line ${sourceInfo.lineNumber}">⌥ source</button>`
-          : '';
         return `<div class="detail-line">
           <span class="detail-line-num">${l.n}</span>
           <span class="detail-line-text">${escapeHtml(l.text)}</span>
-          ${sourceBtn}
         </div>`;
       }).join('')
     : '<p class="muted" style="margin:0">No log lines available — log was not loaded from a file.</p>';
@@ -1650,7 +1634,7 @@ function showLineDetail(el) {
   detailBox.style.display = 'block';
 
   // Request description asynchronously — renders into .detail-description when response arrives
-  requestDescription(el, type, label, startIdx, endIdx);
+  // requestDescription not available in Chrome extension (requires local file access)
 
   // Wire up buttons
   detailBox.querySelector('.detail-close-btn')?.addEventListener('click', () => {
@@ -1679,13 +1663,7 @@ function showLineDetail(el) {
       setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
     });
   });
-  detailBox.querySelectorAll('.detail-src-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const className  = btn.getAttribute('data-class') || '';
-      const lineNumber = parseInt(btn.getAttribute('data-line') || '0');
-      vscode.postMessage({ type: 'openSource', className, lineNumber });
-    });
-  });
+  // detail-src-btn removed in Chrome extension build
 
   const srcPanel = detailBox.querySelector('.detail-source-panel');
   if (!srcPanel) return;
@@ -1722,13 +1700,8 @@ function showLineDetail(el) {
     return;
   }
 
-  // Request Apex source snippet
-  if (headerSourceInfo) {
-    srcPanel.innerHTML = '<div class="detail-src-loading">Loading source…</div>';
-    vscode.postMessage({ type: 'getSourceSnippet', className: headerSourceInfo.className, lineNumber: headerSourceInfo.lineNumber });
-  } else {
-    srcPanel.innerHTML = '<div class="detail-src-not-found">No source reference found for this span.</div>';
-  }
+  // Source snippets require local file access — not available in Chrome extension
+  srcPanel.innerHTML = '<div class="detail-src-not-found">Source code not available in browser. Use the VS Code extension to view source files.</div>';
 }
 
 // Request description from extension host based on span type, and show it in the header
@@ -2072,14 +2045,15 @@ function renderCategoryLines(category, lines) {
 
   container.innerHTML = `<div class="chart-panel"><h3>Lines for ${escapeHtml(category)}</h3><div class="chart-container">${rows}</div></div>`;
 
-  // hook clicks to open the line
+  // Copy line text to clipboard on click (editor not available in browser)
   const lineEls = container.querySelectorAll('.cat-line');
   lineEls.forEach((el) => {
+    el.title = 'Click to copy line';
     el.addEventListener('click', () => {
-      const idx = el.getAttribute('data-line-index');
-      if (idx != null) {
-        vscode.postMessage({ type: 'openLine', lineIndex: Number(idx) });
-      }
+      const text = el.querySelector('.cat-line-text')?.textContent || '';
+      navigator.clipboard.writeText(text).catch(() => {});
+      el.style.background = 'var(--vscode-editor-selectionBackground)';
+      setTimeout(() => { el.style.background = ''; }, 600);
     });
   });
 }
@@ -2741,7 +2715,7 @@ function renderStaticScanResults(msg) {
                 <span class="scan-sev-badge ${sev.cls}">${sev.icon} ${sev.label}</span>
                 <span class="scan-cat-label" style="color:${catMeta.color};">${catMeta.icon} ${catMeta.label}</span>
                 <span class="scan-rule-name">${escapeHtml(f.rule)}</span>
-                ${f.lineIndex !== null ? `<button class="scan-open-btn" data-line-index="${f.lineIndex}" onclick="vscode.postMessage({type:'openLine',lineIndex:${f.lineIndex}})">Open in log</button>` : ''}
+                ${f.lineIndex !== null ? `<span class="scan-line-ref">Line ${f.lineIndex}</span>` : ''}
               </div>
               <div class="scan-finding-msg">${escapeHtml(f.message)}</div>
               ${f.detail ? `<div class="scan-finding-detail">${escapeHtml(f.detail)}</div>` : ''}
@@ -3070,7 +3044,6 @@ function renderDatasourceDetail(startIdx, endIdx, label) {
   return `
     <div class="detail-src-header">
       <span class="detail-src-filename">${escapeHtml(providerClass)}.cls</span>
-      <button class="detail-src-open-btn" data-class="${escapeHtml(providerClass)}" data-line="1">Open file ↗</button>
     </div>
     <div class="ds-detail">
       <div class="ds-section-label">Methods called</div>
@@ -3175,7 +3148,6 @@ function renderSourceSnippet(msg) {
   panel.innerHTML = `
     <div class="detail-src-header">
       <span class="detail-src-filename">${escapeHtml(fileName)}</span>
-      <button class="detail-src-open-btn" data-class="${escapeHtml(msg.className)}" data-line="${msg.lineNumber}">Open file ↗</button>
     </div>
     <div class="detail-src-lines">${linesHtml}</div>`;
 
