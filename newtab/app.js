@@ -1,13 +1,13 @@
 // app.js — Chrome extension glue: org detection, log list, log loading
 // Runs after main.js (which provides renderLogSummary, parseLog, etc.)
 
-let currentOrgUrl = null;
+let appOrgUrl = null;
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   const stored = await chrome.storage.session.get('orgUrl');
   if (stored.orgUrl) {
-    currentOrgUrl = stored.orgUrl;
+    appOrgUrl = stored.orgUrl;
     updateOrgDisplay(stored.orgUrl);
     loadLogList();
   }
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'orgDetected' && message.orgUrl) {
-    currentOrgUrl = message.orgUrl;
+    appOrgUrl = message.orgUrl;
     updateOrgDisplay(message.orgUrl);
   }
 });
@@ -54,22 +54,22 @@ async function loadLogList() {
   if (sfTab) {
     try {
       const origin = new URL(sfTab.url).origin;
-      currentOrgUrl = origin;
+      appOrgUrl = origin;
       await chrome.storage.session.set({ orgUrl: origin });
       updateOrgDisplay(origin);
     } catch {}
   }
 
   // Second try: fall back to session storage
-  if (!currentOrgUrl) {
+  if (!appOrgUrl) {
     const stored = await chrome.storage.session.get('orgUrl');
     if (stored.orgUrl) {
-      currentOrgUrl = stored.orgUrl;
+      appOrgUrl = stored.orgUrl;
       updateOrgDisplay(stored.orgUrl);
     }
   }
 
-  if (!currentOrgUrl) {
+  if (!appOrgUrl) {
     setStateMessage(stateEl, '🔗', 'Navigate to a Salesforce org in another tab first, then click Refresh.');
     tableEl.style.display = 'none';
     return;
@@ -78,7 +78,7 @@ async function loadLogList() {
   setStateMessage(stateEl, '⏳', 'Loading logs…');
   tableEl.style.display = 'none';
 
-  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogs', orgUrl: currentOrgUrl });
+  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogs', orgUrl: appOrgUrl });
   if (!resp.ok) {
     setStateMessage(stateEl, '⚠', 'Could not load logs: ' + resp.error);
     return;
@@ -149,7 +149,7 @@ function renderLogTable(logs) {
       e.stopPropagation();
       delBtn.textContent = '…';
       delBtn.disabled = true;
-      const resp = await chrome.runtime.sendMessage({ type: 'deleteLog', orgUrl: currentOrgUrl, logId: log.Id });
+      const resp = await chrome.runtime.sendMessage({ type: 'deleteLog', orgUrl: appOrgUrl, logId: log.Id });
       if (resp.ok) {
         lastLogs = lastLogs.filter(l => l.Id !== log.Id);
         renderLogTable(lastLogs);
@@ -186,7 +186,7 @@ async function loadLog(logId, label) {
   ph.appendChild(msg);
   summary.appendChild(ph);
 
-  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogBody', orgUrl: currentOrgUrl, logId });
+  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogBody', orgUrl: appOrgUrl, logId });
   if (!resp.ok) {
     summary.textContent = '';
     const errPh = document.createElement('div');
@@ -199,7 +199,7 @@ async function loadLog(logId, label) {
     return;
   }
 
-  renderLogSummary(resp.text, label, currentOrgUrl, null);
+  renderLogSummary(resp.text, label, appOrgUrl, null);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
