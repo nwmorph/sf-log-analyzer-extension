@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SF Log Analyzer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ext-layout">
+
+    <!-- Left sidebar: log list -->
+    <aside class="log-sidebar" id="log-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <span class="sidebar-logo">⚡</span>
+          SF Log Analyzer
+        </div>
+        <div class="sidebar-org" id="sidebar-org">Not connected</div>
+      </div>
+
+      <div class="sidebar-controls">
+        <button class="sidebar-btn primary" id="btn-refresh">↺ Refresh</button>
+        <label class="sidebar-label">
+          <input type="checkbox" id="chk-unread-only" /> Unread only
+        </label>
+      </div>
+
+      <div id="log-list-state" class="log-list-state">
+        <div class="log-list-placeholder">
+          <div class="placeholder-icon">🔍</div>
+          <p>Open a Salesforce org tab first, then click Refresh.</p>
+        </div>
+      </div>
+
+      <table class="log-table" id="log-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Operation</th>
+            <th>Time</th>
+            <th>Size</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="log-table-body"></tbody>
+      </table>
+    </aside>
+
+    <!-- Main content: analyzer -->
+    <main class="analyzer-main">
+      <div class="page">
+        <section id="summary" class="summary empty">
+          <div class="placeholder">
+            <h2>No log selected</h2>
+            <p>Select a log from the list on the left to analyse it.</p>
+          </div>
+        </section>
+      </div>
+      <div id="span-tooltip" class="span-tooltip" style="display:none;"></div>
+    </main>
+
+  </div>
+
+  <script src="main.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
