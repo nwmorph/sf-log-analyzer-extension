@@ -1073,8 +1073,8 @@ function renderTimeline(events, flowNames) {
         </div>
         <div class="tl-zoom-hint" id="tl-gantt-zoom-hint" style="display:none;">Pinch or Ctrl+scroll to zoom · Scroll to pan · Double-click to reset</div>
       </div>
-      ${errorEvents.length > 0 ? `<div class="tl-points-label tl-points-label-error">Errors &amp; Exceptions (${errorEvents.length})</div>${renderPointStrip(errorEvents, timelineStart, totalMs, firstNanosRef)}` : ''}
-      ${debugEvents.length > 0 ? `<div class="tl-points-label">Debug statements (${debugEvents.length})</div>${renderPointStrip(debugEvents, timelineStart, totalMs, firstNanosRef)}` : ''}
+      ${errorEvents.length > 0 ? `<div class="tl-event-group tl-event-group-errors"><div class="tl-points-label tl-points-label-error">Errors &amp; Exceptions (${errorEvents.length})</div>${renderPointStrip(errorEvents, timelineStart, totalMs, firstNanosRef)}</div>` : ''}
+      ${debugEvents.length > 0 ? `<div class="tl-event-group tl-event-group-debug"><div class="tl-points-label">Debug statements (${debugEvents.length})</div>${renderPointStrip(debugEvents, timelineStart, totalMs, firstNanosRef)}</div>` : ''}
       <div id="tl-line-detail" class="tl-line-detail" style="display:none;"></div>
       <div class="timeline-axis">
         <span class="axis-start">${startTime}</span>
@@ -1304,11 +1304,10 @@ function attachInteractionHandlers() {
       // Show/hide error and debug strips based on filter
       const showErrors = filter === 'all' || filter === 'errors';
       const showDebug  = filter === 'all' || filter === 'debug';
-      document.querySelectorAll('.tl-points-label, .tl-point-strip').forEach(el => {
-        const isErrorSection = el.classList.contains('tl-points-label-error') ||
-          (el.previousElementSibling && el.previousElementSibling.classList.contains('tl-points-label-error'));
-        el.style.display = isErrorSection ? (showErrors ? '' : 'none') : (showDebug ? '' : 'none');
-      });
+      const errGroup = document.querySelector('.tl-event-group-errors');
+      const dbgGroup = document.querySelector('.tl-event-group-debug');
+      if (errGroup) errGroup.style.display = showErrors ? '' : 'none';
+      if (dbgGroup) dbgGroup.style.display = showDebug  ? '' : 'none';
     });
   });
 
