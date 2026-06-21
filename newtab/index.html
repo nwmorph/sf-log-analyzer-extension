@@ -84,29 +84,33 @@
       let startX = 0;
       let startW = 0;
 
+      // Use a transparent overlay during drag to capture all mouse events
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;cursor:col-resize;display:none;';
+      document.body.appendChild(overlay);
+
       resizer.addEventListener('mousedown', function(e) {
         active = true;
         startX = e.clientX;
         startW = sidebar.getBoundingClientRect().width;
-        document.body.style.cursor = 'col-resize';
-        document.body.style.pointerEvents = 'none';
-        resizer.style.pointerEvents = 'auto';
+        overlay.style.display = 'block';
         e.preventDefault();
-        e.stopPropagation();
       });
 
-      window.addEventListener('mousemove', function(e) {
+      overlay.addEventListener('mousemove', function(e) {
         if (!active) return;
         const w = Math.min(700, Math.max(180, startW + e.clientX - startX));
         sidebar.style.width = w + 'px';
       });
 
-      window.addEventListener('mouseup', function() {
-        if (!active) return;
+      overlay.addEventListener('mouseup', function() {
         active = false;
-        document.body.style.cursor = '';
-        document.body.style.pointerEvents = '';
-        resizer.style.pointerEvents = '';
+        overlay.style.display = 'none';
+      });
+
+      overlay.addEventListener('mouseleave', function() {
+        active = false;
+        overlay.style.display = 'none';
       });
     })();
   </script>

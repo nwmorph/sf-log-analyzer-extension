@@ -2064,7 +2064,7 @@ button:hover {
   border-top: 1px solid var(--vscode-editorWidget-border);
 }
 .bind-var-name {
-  color: var(--vscode-symbolIcon-variableForeground, #9cdcfe);
+  color: var(--vscode-textLink-foreground);
   white-space: nowrap;
   padding: 2px 10px 2px 4px;
   vertical-align: top;
