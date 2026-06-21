@@ -2649,8 +2649,7 @@ body {
 }
 
 .ext-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  display: flex;
   height: 100vh;
 }
 
@@ -2661,6 +2660,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 320px;
+  min-width: 200px;
+  max-width: 600px;
+  resize: horizontal;
+  flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -2807,8 +2811,10 @@ body {
 
 /* Analyzer main */
 .analyzer-main {
+  flex: 1;
   overflow-y: auto;
   background: var(--vscode-editor-background);
+  min-width: 0;
 }
 
 .analyzer-main .page {

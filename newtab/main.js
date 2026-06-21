@@ -1240,9 +1240,12 @@ function attachInteractionHandlers() {
         }
       });
 
-      // Update detail label with count
+      // Update detail label with phase name and count
       if (detailLabel) {
-        detailLabel.textContent = `${label} — ${highlightCount} span${highlightCount === 1 ? '' : 's'} in this window`;
+        const phaseName = phase === 'gap' ? 'Platform Overhead' : label;
+        detailLabel.textContent = highlightCount > 0
+          ? `${phaseName.toUpperCase()} — ${highlightCount} span${highlightCount === 1 ? '' : 's'} in this window`
+          : `${phaseName.toUpperCase()} — no matching spans in this window`;
       }
 
       // Scroll the first highlighted segment into view
@@ -1565,7 +1568,9 @@ function showLineDetail(el) {
 
   const isValidationSpan = el.classList.contains('tl-cat-validation');
   const isDatasourceSpan = el.classList.contains('tl-cat-datasource');
-  const hasSrc = !!headerSourceInfo || isValidationSpan || isDatasourceSpan;
+  // In the Chrome extension, source files are not accessible — only show source panel
+  // for validation and datasource spans which render from log data, not local files
+  const hasSrc = isValidationSpan || isDatasourceSpan;
 
   let bindHtml = '';
   if (bindVars && bindVars.length > 0) {
@@ -2948,6 +2953,8 @@ function renderGovernorLimits(limitData) {
 
   const available = LIMIT_KEYS.filter(lk => limitData[lk.key]);
   if (available.length === 0) return '<p class="muted">No governor limit data found in this log.</p>';
+  const allZero = available.every(lk => limitData[lk.key].used === 0);
+  const zeroNote = allZero ? '<p class="muted" style="margin:0 0 10px">All limits are 0 — this log was captured for a UI/system operation with no Apex execution.</p>' : '';
 
   const bars = available.map(lk => {
     const entry = limitData[lk.key];
@@ -2967,7 +2974,7 @@ function renderGovernorLimits(limitData) {
       </div>`;
   }).join('');
 
-  return `<div class="limits-container">${bars}</div>`;
+  return `${zeroNote}<div class="limits-container">${bars}</div>`;
 }
 
 function renderDatasourceDetail(startIdx, endIdx, label) {
