@@ -1183,11 +1183,10 @@ function attachInteractionHandlers() {
     btn.style.display = 'none';
   });
 
-  // Narrative step rows: click → switch to Timeline and highlight matching span
+  // Narrative step rows: click → switch to Timeline tab and show the gantt for that phase
   document.querySelectorAll('.narr-step[data-line-index]').forEach((el) => {
     el.style.cursor = 'pointer';
     el.addEventListener('click', () => {
-      const lineIndex = Number(el.getAttribute('data-line-index'));
       // Switch to Timeline tab
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1195,15 +1194,42 @@ function attachInteractionHandlers() {
       const timelinePanel = document.getElementById('tab-timeline');
       if (timelineBtn) timelineBtn.classList.add('active');
       if (timelinePanel) timelinePanel.classList.add('active');
-      // Find and highlight the matching segment in the timeline
+
+      // Determine the phase type from the step's CSS class
+      const classList = [...el.classList];
+      const phaseClass = classList.find(c => c.startsWith('narr-step-') && c !== 'narr-step');
+      const phase = phaseClass ? phaseClass.replace('narr-step-', '') : null;
+
+      // Ensure the Execution Timeline collapsible is open
+      const timelineCollapsible = document.querySelector('.collapsible-panel');
+      if (timelineCollapsible && !timelineCollapsible.classList.contains('open')) {
+        timelineCollapsible.classList.add('open');
+        timelineCollapsible.querySelector('.collapsible-header')?.setAttribute('aria-expanded', 'true');
+      }
+
       setTimeout(() => {
-        const seg = document.querySelector(`.timeline-segment[data-line-index="${lineIndex}"]`);
-        if (seg) {
-          seg.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          seg.style.outline = '3px solid var(--vscode-focusBorder)';
-          setTimeout(() => { seg.style.outline = ''; }, 2000);
+        // Activate the matching filter button so the right category is shown
+        if (phase) {
+          const filterBtn = document.querySelector(`.tl-filter-btn[data-filter="${phase}"]`);
+          if (filterBtn) {
+            filterBtn.click();
+          } else {
+            document.querySelector('.tl-filter-all')?.click();
+          }
         }
-      }, 100); // small delay to let the tab switch render
+
+        // Show the gantt — click the first visible matching overview segment
+        const matchSeg = phase
+          ? document.querySelector(`.overview-segment.tl-cat-${phase}`)
+          : document.querySelector('.overview-segment:not(.overview-gap)');
+        if (matchSeg) {
+          matchSeg.click();
+          matchSeg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          // Brief pulse to indicate which segment was activated
+          matchSeg.style.filter = 'brightness(1.6)';
+          setTimeout(() => { matchSeg.style.filter = ''; }, 800);
+        }
+      }, 80);
     });
   });
 
