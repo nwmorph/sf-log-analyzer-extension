@@ -1355,6 +1355,13 @@ function attachInteractionHandlers() {
           seg.style.pointerEvents = visible ? 'auto' : 'none';
         });
         document.querySelectorAll('.overview-segment').forEach(s => s.classList.remove('overview-active'));
+        // Update gantt label to reflect the active filter
+        if (detailLabel) {
+          const filterLabel = btn.textContent.replace(/\s*\(.*\)\s*$/, '').trim();
+          detailLabel.textContent = filter === 'all'
+            ? 'All spans'
+            : `${filterLabel.toUpperCase()} — filtered view`;
+        }
       }
       // In the overview — hide non-matching blocks entirely
       document.querySelectorAll('.overview-segment').forEach(seg => {
