@@ -1094,6 +1094,7 @@ function renderTimeline(events, flowNames) {
       </div>
       <div class="tl-detail" id="tl-detail" style="display:none;">
         <div class="tl-detail-label" id="tl-detail-label">
+          <span id="tl-detail-label-text"></span>
           <span class="tl-zoom-btns">
             <button class="tl-zoom-btn" id="tl-gantt-zoom-in"  title="Zoom in">+</button>
             <button class="tl-zoom-btn" id="tl-gantt-zoom-out" title="Zoom out">−</button>
@@ -1232,7 +1233,7 @@ function attachInteractionHandlers() {
 
   // Overview segment click -> expand detail filtered to that phase
   const detailEl = document.getElementById('tl-detail');
-  const detailLabel = document.getElementById('tl-detail-label');
+  const detailLabel = document.getElementById('tl-detail-label-text');
   document.querySelectorAll('.overview-segment').forEach((el) => {
     el.addEventListener('mouseenter', (ev) => {
       if (!tooltip) return;

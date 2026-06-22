@@ -2010,6 +2010,9 @@ button {
   letter-spacing: 0.06em;
   color: var(--vscode-descriptionForeground);
   padding: 0 8px 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Point events (errors / debug markers) */
