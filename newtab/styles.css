@@ -2323,6 +2323,7 @@ button {
 
 .src-lines {
   overflow-y: auto;
+  overflow-x: auto;
   max-height: 300px;
 }
 
@@ -2351,8 +2352,6 @@ button {
 .src-line-text {
   white-space: pre;
   color: var(--vscode-editor-foreground);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .detail-src-loading, .detail-src-not-found {
@@ -2553,6 +2552,7 @@ button {
 .detail-lines {
   height: 320px;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 8px 0;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.78rem;
@@ -2579,8 +2579,7 @@ button {
 }
 
 .detail-line-text {
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: pre;
   color: var(--vscode-editor-foreground);
 }
 
