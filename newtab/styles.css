@@ -2311,6 +2311,50 @@ button {
   font-size: 0.78rem;
 }
 
+.src-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+  background: color-mix(in srgb, var(--vscode-editorWidget-border) 20%, transparent);
+}
+
+.src-lines {
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.src-line {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  line-height: 1.55;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.78rem;
+}
+
+.src-line-target {
+  background: color-mix(in srgb, var(--vscode-focusBorder) 15%, transparent);
+  border-left: 2px solid var(--vscode-focusBorder);
+}
+
+.src-line-num {
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: right;
+  color: var(--vscode-editorLineNumber-foreground);
+  user-select: none;
+}
+
+.src-line-text {
+  white-space: pre;
+  color: var(--vscode-editor-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .detail-src-loading, .detail-src-not-found {
   padding: 20px 14px;
   font-size: 0.82rem;

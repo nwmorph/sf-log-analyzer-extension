@@ -1666,9 +1666,9 @@ function showLineDetail(el) {
 
   const isValidationSpan = el.classList.contains('tl-cat-validation');
   const isDatasourceSpan = el.classList.contains('tl-cat-datasource');
-  // In the Chrome extension, source files are not accessible — only show source panel
-  // for validation and datasource spans which render from log data, not local files
-  const hasSrc = isValidationSpan || isDatasourceSpan;
+  // Show source panel for validation, datasource, and any span with a resolvable Apex class
+  const hasApexClass = !isValidationSpan && !isDatasourceSpan && headerSourceInfo?.className && !isSystemClass(headerSourceInfo.className);
+  const hasSrc = isValidationSpan || isDatasourceSpan || hasApexClass;
 
   let bindHtml = '';
   if (bindVars && bindVars.length > 0) {
@@ -1773,8 +1773,11 @@ function showLineDetail(el) {
     return;
   }
 
-  // Source snippets require local file access — not available in Chrome extension
-  srcPanel.innerHTML = '<div class="detail-src-not-found">Source code not available in browser. Use the VS Code extension to view source files.</div>';
+  // Source for non-apex spans (validation/datasource rendered above; for others, requestDescription handles it)
+  if (!isFlow && !isValidationSpan && !isDatasourceSpan) {
+    // requestDescription will populate this panel after fetching from org
+    return;
+  }
 }
 
 // Request description from extension host based on span type, and show it in the header
@@ -1810,16 +1813,70 @@ function requestDescription(el, type, label, startIdx, endIdx) {
 
   if (!className || isSystemClass(className)) return;
 
-  // Fetch Apex source from org and extract description
+  // Show loading state in source panel immediately
+  const srcPanel = document.querySelector('#tl-line-detail .detail-source-panel');
+  if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-loading">Loading source…</div>';
+
+  // Fetch Apex source from org
   chrome.runtime.sendMessage({ type: 'getApexSource', orgUrl: currentOrgUrl, className })
     .then(resp => {
-      if (!resp.ok || !resp.body) return;
-      const description = extractApexDescriptionFromSource(resp.body, methodHint);
+      if (!resp.ok || !resp.body) {
+        if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-not-found">Source not found in org.</div>';
+        return;
+      }
+      const source = resp.body;
+
+      // Extract and show description
+      const description = extractApexDescriptionFromSource(source, methodHint);
       if (description) {
-        renderDescription({ kind: 'apex', name: descLabel || className, description });
+        renderDescription({ kind: methodHint ? 'apexMethod' : 'apex', name: descLabel || className, description, object: methodHint });
+      }
+
+      // Show source code around the relevant line
+      if (srcPanel) {
+        // Find the line number from headerSourceInfo if available
+        const lineNumber = document.querySelector('#tl-line-detail')
+          ?._sourceLineNumber || 1;
+        renderApexSourceInPanel(srcPanel, source, className, lineNumber, methodHint);
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-not-found">Could not load source from org.</div>';
+    });
+}
+
+function renderApexSourceInPanel(panel, source, className, targetLine, methodHint) {
+  const allLines = source.split(/\r?\n/);
+
+  // Find the best line to centre on — method declaration if we have a hint
+  let centre = Math.max(0, targetLine - 1);
+  if (methodHint) {
+    const methodName = methodHint.replace(/\(.*$/, '').trim();
+    const methodRe = new RegExp(`\\b${methodName}\\s*\\(`, 'i');
+    const found = allLines.findIndex(l => methodRe.test(l));
+    if (found >= 0) centre = found;
+  }
+
+  const from = Math.max(0, centre - 5);
+  const to   = Math.min(allLines.length - 1, centre + 35);
+  const linesHtml = allLines.slice(from, to + 1).map((text, i) => {
+    const n = from + i + 1;
+    const isTarget = from + i === centre;
+    return `<div class="src-line${isTarget ? ' src-line-target' : ''}">
+      <span class="src-line-num">${n}</span>
+      <span class="src-line-text">${escapeHtml(text)}</span>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="src-header">${escapeHtml(className)}.cls</div>
+    <div class="src-lines">${linesHtml}</div>`;
+
+  // Scroll the highlighted line into view
+  setTimeout(() => {
+    const target = panel.querySelector('.src-line-target');
+    if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, 50);
 }
 
 function extractApexDescriptionFromSource(source, methodHint) {
