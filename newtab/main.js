@@ -79,13 +79,13 @@ function renderLogSummary(text, label, orgUrl, mtime) {
     </div>
 
     <div class="tab-bar">
-      <button class="tab-btn active" data-tab="timeline">Timeline</button>
+      <button class="tab-btn active" data-tab="report">Report</button>
+      <button class="tab-btn" data-tab="timeline">Timeline</button>
       <button class="tab-btn" data-tab="scan">Code Scan ${result.scanFindings.filter(f => f.severity === 'critical').length > 0 ? `<span class="tab-badge tab-badge-critical">${result.scanFindings.filter(f => f.severity === 'critical').length}</span>` : result.scanFindings.length > 0 ? `<span class="tab-badge">${result.scanFindings.length}</span>` : ''}</button>
-      <button class="tab-btn" data-tab="report">Report</button>
       <button class="tab-btn" data-tab="raw">Raw Log</button>
     </div>
 
-    <div class="tab-panel active" id="tab-timeline">
+    <div class="tab-panel" id="tab-timeline">
       ${collapsible('Execution Timeline', renderTimeline(result.events, result.flowNames), true)}
       ${collapsible('What happened', renderNarrative(result), false)}
       ${collapsible('Governor Limits', renderGovernorLimits(result.limitData), false)}
@@ -97,7 +97,7 @@ function renderLogSummary(text, label, orgUrl, mtime) {
       ${renderCodeScan(result)}
     </div>
 
-    <div class="tab-panel" id="tab-report">
+    <div class="tab-panel active" id="tab-report">
       ${renderReport(result)}
     </div>
 
