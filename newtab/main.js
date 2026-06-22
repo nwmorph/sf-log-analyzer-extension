@@ -1198,7 +1198,9 @@ function attachInteractionHandlers() {
       // Determine the phase type from the step's CSS class
       const classList = [...el.classList];
       const phaseClass = classList.find(c => c.startsWith('narr-step-') && c !== 'narr-step');
-      const phase = phaseClass ? phaseClass.replace('narr-step-', '') : null;
+      let phase = phaseClass ? phaseClass.replace('narr-step-', '') : null;
+      // code-unit steps appear as 'other' in the timeline filter
+      if (phase === 'code-unit') phase = 'other';
 
       // Ensure the Execution Timeline collapsible is open
       const timelineCollapsible = document.querySelector('.collapsible-panel');
