@@ -2422,6 +2422,20 @@ button {
   border-radius: 5px;
   padding: 8px 10px;
 }
+
+.vd-rule-desc {
+  font-size: 0.78rem;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid color-mix(in srgb, var(--vscode-editorWidget-border) 40%, transparent);
+}
+
+.flow-org-link-bar {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+}
 .vd-rule-header {
   display: flex;
   align-items: center;

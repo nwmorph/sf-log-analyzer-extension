@@ -1784,61 +1784,151 @@ function showLineDetail(el) {
 function requestDescription(el, type, label, startIdx, endIdx) {
   if (!currentOrgUrl) return;
 
-  // Determine className and methodHint from span type
+  const srcPanel = document.querySelector('#tl-line-detail .detail-source-panel');
+
+  // ── Flow spans ────────────────────────────────────────────────────────────
+  if (el.classList.contains('tl-cat-flow')) {
+    // renderFlowTrace already shows the runtime trace in the src panel
+    // Additionally fetch description from FlowDefinition metadata
+    let flowLabel = label.replace(/^Flow:/i, '').trim();
+    for (let i = startIdx; i <= Math.min(endIdx, startIdx + 50); i++) {
+      const parts = (currentLogLines[i] || '').split('|');
+      if (parts[1]?.trim() === 'FLOW_START_INTERVIEW_BEGIN' && parts[3]?.trim()) {
+        flowLabel = parts[3].trim(); break;
+      }
+    }
+    chrome.runtime.sendMessage({ type: 'getFlowDescription', orgUrl: currentOrgUrl, flowLabel })
+      .then(resp => {
+        if (!resp.ok) return;
+        if (resp.accessDenied) {
+          renderDescription({ kind: 'flow', name: 'Flow', description: '(No access to Flow metadata — requires Modify All Data or View Setup permission)' });
+          return;
+        }
+        if (resp.description) {
+          renderDescription({ kind: 'flow', name: flowLabel, description: resp.description });
+        }
+        // Add Flow Builder link to the flow trace panel
+        if (srcPanel && resp.activeVersionId && currentOrgUrl) {
+          const linkBar = srcPanel.querySelector('.flow-org-link-bar') || document.createElement('div');
+          linkBar.className = 'flow-org-link-bar';
+          linkBar.innerHTML = '';
+          const a = document.createElement('a');
+          a.className = 'flow-org-link';
+          a.href = '#';
+          a.textContent = 'Open in Flow Builder ↗';
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = `${currentOrgUrl}/builder_platform_interaction/flowBuilder.app?flowId=${resp.activeVersionId}`;
+            window.open(url, '_blank', 'noopener');
+          });
+          linkBar.appendChild(a);
+          srcPanel.insertBefore(linkBar, srcPanel.firstChild);
+        }
+      })
+      .catch(() => {});
+    return;
+  }
+
+  // ── Validation spans ───────────────────────────────────────────────────────
+  if (el.classList.contains('tl-cat-validation')) {
+    // renderValidationDetail already shows pass/fail/formula in src panel
+    // Enrich with descriptions from Tooling API
+    const rules = currentValidationRules.filter(r => r.lineIndex >= startIdx && r.lineIndex <= endIdx);
+    rules.forEach(rule => {
+      if (!rule.object || !rule.name) return;
+      chrome.runtime.sendMessage({ type: 'getValidationRuleDescription', orgUrl: currentOrgUrl, ruleName: rule.name, objectName: rule.object })
+        .then(resp => {
+          if (resp.ok && resp.description) {
+            // Inject description under the rule card in the validation detail panel
+            const ruleEls = srcPanel?.querySelectorAll('.vd-rule');
+            ruleEls?.forEach(ruleEl => {
+              if (ruleEl.querySelector('.vd-rule-name')?.textContent === rule.name) {
+                if (!ruleEl.querySelector('.vd-rule-desc')) {
+                  const d = document.createElement('div');
+                  d.className = 'vd-rule-desc';
+                  d.textContent = resp.description;
+                  ruleEl.appendChild(d);
+                }
+              }
+            });
+          }
+        })
+        .catch(() => {});
+    });
+    return;
+  }
+
+  // ── Trigger spans ──────────────────────────────────────────────────────────
+  if (el.classList.contains('tl-cat-before-trigger') || el.classList.contains('tl-cat-after-trigger') || el.classList.contains('tl-cat-trigger')) {
+    const m = label.match(/^(\w+)\s+on\s+(\w+)\s+trigger\s+event\s+(\w+)/i);
+    const className = m ? m[1] : label.match(/^(\w+)/)?.[1];
+    if (!className) return;
+    if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-loading">Loading source…</div>';
+    chrome.runtime.sendMessage({ type: 'getApexSource', orgUrl: currentOrgUrl, className })
+      .then(resp => {
+        if (!resp.ok || !resp.body) {
+          if (srcPanel) srcPanel.innerHTML = `<div class="detail-src-not-found">${resp.error?.includes('ACCESS_DENIED') ? 'No access to Apex source (requires Author Apex permission).' : 'Trigger source not found in org.'}</div>`;
+          return;
+        }
+        const desc = extractApexDescriptionFromSource(resp.body, null)
+          || (m ? `Fires on ${m[2]} — ${m[3]}` : null);
+        if (desc) renderDescription({ kind: 'trigger', name: className, description: desc });
+        if (srcPanel) renderApexSourceInPanel(srcPanel, resp.body, className, 1, null);
+      })
+      .catch(() => { if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-not-found">Could not load source.</div>'; });
+    return;
+  }
+
+  // ── Datasource spans ───────────────────────────────────────────────────────
+  if (el.classList.contains('tl-cat-datasource')) {
+    const className = label.replace(/^ApexDataSource:/i, '').trim();
+    if (!className) return;
+    chrome.runtime.sendMessage({ type: 'getApexSource', orgUrl: currentOrgUrl, className })
+      .then(resp => {
+        if (!resp.ok || !resp.body) return;
+        const desc = extractApexDescriptionFromSource(resp.body, null);
+        if (desc) renderDescription({ kind: 'apex', name: className, description: desc });
+      })
+      .catch(() => {});
+    return;
+  }
+
+  // ── Apex method / SOQL / DML / other ─────────────────────────────────────
   let className = null;
   let methodHint = null;
   let descLabel = null;
+  let sourceLineNumber = 1;
 
-  if (el.classList.contains('tl-cat-before-trigger') || el.classList.contains('tl-cat-after-trigger') || el.classList.contains('tl-cat-trigger')) {
-    const m = label.match(/^(\w+)\s+on\s+(\w+)\s+trigger\s+event\s+(\w+)/i);
-    className = m ? m[1] : label.match(/^(\w+)/)?.[1];
-    descLabel = className;
-  } else if (el.classList.contains('tl-cat-datasource')) {
-    className = label.replace(/^ApexDataSource:/i, '').trim();
-    descLabel = className;
+  const startLineParts = (currentLogLines[startIdx] || '').split('|');
+  const sig = startLineParts[4]?.trim() || startLineParts[3]?.trim() || '';
+  const mm = sig.match(/^([A-Z]\w*)\.([\w]+\(.*?\))/);
+  if (mm) {
+    className = mm[1];
+    methodHint = mm[2];
+    descLabel = `${mm[1]}.${mm[2].replace(/\(.*$/, '()')}`;
+    const lineMatch = startLineParts[2]?.match(/\[(\d+)\]/);
+    if (lineMatch) sourceLineNumber = parseInt(lineMatch[1]);
   } else {
-    // Method/SOQL/DML/other: extract from log line signature
-    const startLineParts = (currentLogLines[startIdx] || '').split('|');
-    const sig = startLineParts[4]?.trim() || startLineParts[3]?.trim() || '';
-    const mm = sig.match(/^([A-Z]\w*)\.([\w]+\(.*?\))/);
-    if (mm) {
-      className = mm[1];
-      methodHint = mm[2];
-      descLabel = `${mm[1]}.${mm[2].replace(/\(.*$/, '()')}`;
-    } else {
-      const info = extractSourceInfoForSoql(startIdx);
-      if (info) { className = info.className; descLabel = className; }
-    }
+    const info = extractSourceInfoForSoql(startIdx);
+    if (info) { className = info.className; descLabel = className; sourceLineNumber = info.lineNumber || 1; }
   }
 
   if (!className || isSystemClass(className)) return;
 
-  // Show loading state in source panel immediately
-  const srcPanel = document.querySelector('#tl-line-detail .detail-source-panel');
   if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-loading">Loading source…</div>';
 
-  // Fetch Apex source from org
   chrome.runtime.sendMessage({ type: 'getApexSource', orgUrl: currentOrgUrl, className })
     .then(resp => {
       if (!resp.ok || !resp.body) {
-        if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-not-found">Source not found in org.</div>';
+        if (srcPanel) {
+          const isAccessDenied = !resp.ok && (resp.error || '').includes('ACCESS_DENIED');
+          srcPanel.innerHTML = `<div class="detail-src-not-found">${isAccessDenied ? 'No access to Apex source. Requires Author Apex or View All Data permission.' : 'Source not found in org.'}</div>`;
+        }
         return;
       }
-      const source = resp.body;
-
-      // Extract and show description
-      const description = extractApexDescriptionFromSource(source, methodHint);
-      if (description) {
-        renderDescription({ kind: methodHint ? 'apexMethod' : 'apex', name: descLabel || className, description, object: methodHint });
-      }
-
-      // Show source code around the relevant line
-      if (srcPanel) {
-        // Find the line number from headerSourceInfo if available
-        const lineNumber = document.querySelector('#tl-line-detail')
-          ?._sourceLineNumber || 1;
-        renderApexSourceInPanel(srcPanel, source, className, lineNumber, methodHint);
-      }
+      const description = extractApexDescriptionFromSource(resp.body, methodHint);
+      if (description) renderDescription({ kind: methodHint ? 'apexMethod' : 'apex', name: descLabel || className, description, object: methodHint });
+      if (srcPanel) renderApexSourceInPanel(srcPanel, resp.body, className, sourceLineNumber, methodHint);
     })
     .catch(() => {
       if (srcPanel) srcPanel.innerHTML = '<div class="detail-src-not-found">Could not load source from org.</div>';

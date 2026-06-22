@@ -43,6 +43,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'getFlowDescription') {
+    getFlowDescription(message.orgUrl, message.flowLabel)
+      .then(result => sendResponse({ ok: true, ...result }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'getValidationRuleDescription') {
+    getValidationRuleDescription(message.orgUrl, message.ruleName, message.objectName)
+      .then(desc => sendResponse({ ok: true, description: desc }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
   if (message.type === 'deleteLog') {
     deleteLog(message.orgUrl, message.logId)
       .then(() => sendResponse({ ok: true }))
@@ -165,4 +179,57 @@ async function getApexSource(orgUrl, className) {
   }
   apexSourceCache[cacheKey] = null;
   return null;
+}
+
+// Cache for metadata queries
+const metadataCache = {};
+
+async function queryTooling(orgUrl, soql) {
+  const sid = await getSessionToken(orgUrl);
+  const apiUrl = toApiUrl(orgUrl);
+  const q = encodeURIComponent(soql);
+  const res = await fetch(`${apiUrl}/services/data/${API_VERSION}/tooling/query/?q=${q}`, {
+    headers: { 'Authorization': `Bearer ${sid}` }
+  });
+  if (res.status === 403 || res.status === 401) {
+    throw new Error('ACCESS_DENIED');
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text.substring(0, 150)}`);
+  }
+  return res.json();
+}
+
+async function getFlowDescription(orgUrl, flowLabel) {
+  const key = `flow::${orgUrl}::${flowLabel}`;
+  if (metadataCache[key] !== undefined) return metadataCache[key];
+  try {
+    // Normalise label for matching — remove namespace prefix noise
+    const bare = flowLabel.split(':').pop().trim();
+    const json = await queryTooling(orgUrl,
+      `SELECT DeveloperName, Description, ActiveVersionId FROM FlowDefinition WHERE MasterLabel LIKE '${bare.replace(/'/g, "\\'")}' LIMIT 5`);
+    const record = json.records?.[0];
+    const result = { description: record?.Description || null, activeVersionId: record?.ActiveVersionId || null, devName: record?.DeveloperName || null };
+    metadataCache[key] = result;
+    return result;
+  } catch (e) {
+    if (e.message === 'ACCESS_DENIED') return { description: null, accessDenied: true };
+    return { description: null };
+  }
+}
+
+async function getValidationRuleDescription(orgUrl, ruleName, objectName) {
+  const key = `vr::${orgUrl}::${objectName}::${ruleName}`;
+  if (metadataCache[key] !== undefined) return metadataCache[key];
+  try {
+    const json = await queryTooling(orgUrl,
+      `SELECT Description FROM ValidationRule WHERE ValidationName = '${ruleName.replace(/'/g, "\\'")}' LIMIT 1`);
+    const desc = json.records?.[0]?.Description || null;
+    metadataCache[key] = desc;
+    return desc;
+  } catch (e) {
+    if (e.message === 'ACCESS_DENIED') return null;
+    return null;
+  }
 }
