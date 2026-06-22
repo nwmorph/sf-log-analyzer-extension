@@ -1709,8 +1709,8 @@ function showLineDetail(el) {
   detailBox.setAttribute('data-for', String(startIdx));
   detailBox.style.display = 'block';
 
-  // Request description asynchronously — renders into .detail-description when response arrives
-  // requestDescription not available in Chrome extension (requires local file access)
+  // Request description from Salesforce org Apex source
+  requestDescription(el, type, label, startIdx, endIdx);
 
   // Wire up buttons
   detailBox.querySelector('.detail-close-btn')?.addEventListener('click', () => {
@@ -1779,76 +1779,66 @@ function showLineDetail(el) {
 
 // Request description from extension host based on span type, and show it in the header
 function requestDescription(el, type, label, startIdx, endIdx) {
-  // Check specific span types by CSS class first (before generic type fallback)
-  if (el.classList.contains('tl-cat-flow')) {
-    let flowApiName = label.replace(/^Flow:/i, '').trim();
-    for (let i = startIdx; i <= Math.min(endIdx, startIdx + 50); i++) {
-      const line = currentLogLines[i] || '';
-      if (line.includes('FLOW_START_INTERVIEW_BEGIN')) {
-        const parts = line.split('|');
-        const candidate = parts[3]?.trim() || '';
-        if (candidate) { flowApiName = candidate; break; }
-      }
-    }
-    if (flowApiName) {
-      vscode.postMessage({ type: 'getDescription', kind: 'flow', name: flowApiName });
-    }
-    return;
-  }
-  if (el.classList.contains('tl-cat-validation')) {
-    const rule = currentValidationRules.find(r => r.lineIndex >= startIdx && r.lineIndex <= endIdx);
-    if (rule) {
-      vscode.postMessage({ type: 'getDescription', kind: 'validationRule', name: rule.name, object: rule.object });
-    }
-    return;
-  }
-  if (el.classList.contains('tl-cat-datasource')) {
-    const providerClass = label.replace(/^ApexDataSource:/i, '').trim();
-    if (providerClass) {
-      vscode.postMessage({ type: 'getDescription', kind: 'apex', name: providerClass });
-    }
-    return;
-  }
-  // Trigger spans: extract trigger name from the label e.g. "SMT_OpportunityTrigger on Opportunity trigger event AfterInsert"
+  if (!currentOrgUrl) return;
+
+  // Determine className and methodHint from span type
+  let className = null;
+  let methodHint = null;
+  let descLabel = null;
+
   if (el.classList.contains('tl-cat-before-trigger') || el.classList.contains('tl-cat-after-trigger') || el.classList.contains('tl-cat-trigger')) {
-    const triggerMatch = label.match(/^(\w+)\s+on\s+(\w+)\s+trigger\s+event\s+(\w+)/i);
-    const triggerName = triggerMatch ? triggerMatch[1] : label.match(/^(\w+)/)?.[1];
-    if (triggerName) {
-      vscode.postMessage({ type: 'getDescription', kind: 'trigger', name: triggerName,
-        object: triggerMatch?.[2], event: triggerMatch?.[3] });
-    }
-    return;
-  }
-
-  // For all other spans (Apex, SOQL, DML, etc.) look up the active Apex class
-  // Extract class+method from the span's own start line (most reliable for method spans)
-  const startLineParts = (currentLogLines[startIdx] || '').split('|');
-  const startLineSig = startLineParts[4]?.trim() || startLineParts[3]?.trim() || '';
-  const methodMatch = startLineSig.match(/^([A-Z]\w*)\.([\w]+\(.*?\))/);
-
-  if (methodMatch) {
-    // Try the span's own class first; if it's a system/custom-setting class with no .cls,
-    // the host returns null and we fall back to the calling frame via the call stack.
-    const callerInfo = extractSourceInfoForSoql(startIdx);
-    if (callerInfo && callerInfo.className !== methodMatch[1]) {
-      // Span belongs to a different class than the active Apex frame — show both:
-      // try span's own class first, and include caller as fallback context
-      vscode.postMessage({ type: 'getDescription', kind: 'apexMethod', name: methodMatch[1],
-        object: methodMatch[2], fallbackClass: callerInfo.className });
+    const m = label.match(/^(\w+)\s+on\s+(\w+)\s+trigger\s+event\s+(\w+)/i);
+    className = m ? m[1] : label.match(/^(\w+)/)?.[1];
+    descLabel = className;
+  } else if (el.classList.contains('tl-cat-datasource')) {
+    className = label.replace(/^ApexDataSource:/i, '').trim();
+    descLabel = className;
+  } else {
+    // Method/SOQL/DML/other: extract from log line signature
+    const startLineParts = (currentLogLines[startIdx] || '').split('|');
+    const sig = startLineParts[4]?.trim() || startLineParts[3]?.trim() || '';
+    const mm = sig.match(/^([A-Z]\w*)\.([\w]+\(.*?\))/);
+    if (mm) {
+      className = mm[1];
+      methodHint = mm[2];
+      descLabel = `${mm[1]}.${mm[2].replace(/\(.*$/, '()')}`;
     } else {
-      vscode.postMessage({ type: 'getDescription', kind: 'apexMethod', name: methodMatch[1], object: methodMatch[2] });
+      const info = extractSourceInfoForSoql(startIdx);
+      if (info) { className = info.className; descLabel = className; }
     }
-    return;
   }
 
-  // Fallback for SOQL/DML/trigger spans: use call stack to find the executing class
-  const info = extractSourceInfoForSoql(startIdx) || (() => {
-    const m = startLineSig.match(/^([A-Z]\w*)\./);
-    return m ? { className: m[1], lineNumber: 0 } : null;
-  })();
-  if (info) {
-    vscode.postMessage({ type: 'getDescription', kind: 'apex', name: info.className });
+  if (!className || isSystemClass(className)) return;
+
+  // Fetch Apex source from org and extract description
+  chrome.runtime.sendMessage({ type: 'getApexSource', orgUrl: currentOrgUrl, className })
+    .then(resp => {
+      if (!resp.ok || !resp.body) return;
+      const description = extractApexDescriptionFromSource(resp.body, methodHint);
+      if (description) {
+        renderDescription({ kind: 'apex', name: descLabel || className, description });
+      }
+    })
+    .catch(() => {});
+}
+
+function extractApexDescriptionFromSource(source, methodHint) {
+  const blockRe = /\/\*+([\s\S]*?)\*\/([\s\S]{0,400})/g;
+  let match;
+  let classLevelDesc = null;
+  while ((match = blockRe.exec(source)) !== null) {
+    const block = match[1];
+    const after = match[2];
+    const descMatch = block.match(/[@*]\s*[Dd]escription[:\s]\s*([\s\S]*?)(?=\s*\*\s*@|\s*\*\s*[A-Z][a-z]+ :|\s*\*\/|$)/);
+    if (!descMatch) continue;
+    const desc = descMatch[1].replace(/^\s*\*\s?/gm, '').replace(/\s+/g, ' ').trim();
+    if (!desc) continue;
+    if (!methodHint) return desc;
+    const methodName = methodHint.replace(/\(.*$/, '').trim();
+    if (after.match(new RegExp(`\\b${methodName}\\s*\\(`))) return desc;
+    if (!classLevelDesc) classLevelDesc = desc;
   }
+  return classLevelDesc;
 }
 
 function renderDescription(msg) {

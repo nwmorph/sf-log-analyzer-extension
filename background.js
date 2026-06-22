@@ -36,6 +36,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'getApexSource') {
+    getApexSource(message.orgUrl, message.className)
+      .then(body => sendResponse({ ok: true, body }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
   if (message.type === 'deleteLog') {
     deleteLog(message.orgUrl, message.logId)
       .then(() => sendResponse({ ok: true }))
@@ -131,4 +138,31 @@ async function deleteLog(orgUrl, logId) {
     const text = await res.text();
     throw new Error(`Delete failed ${res.status}: ${text.substring(0, 200)}`);
   }
+}
+
+// Cache apex source to avoid repeated API calls for same class
+const apexSourceCache = {};
+
+async function getApexSource(orgUrl, className) {
+  const cacheKey = `${orgUrl}::${className}`;
+  if (apexSourceCache[cacheKey] !== undefined) return apexSourceCache[cacheKey];
+
+  const sid = await getSessionToken(orgUrl);
+  const apiUrl = toApiUrl(orgUrl);
+  // Try ApexClass first, then ApexTrigger
+  for (const type of ['ApexClass', 'ApexTrigger']) {
+    const q = encodeURIComponent(`SELECT Body FROM ${type} WHERE Name = '${className.replace(/'/g,"\\'")}' LIMIT 1`);
+    const res = await fetch(`${apiUrl}/services/data/${API_VERSION}/tooling/query/?q=${q}`, {
+      headers: { 'Authorization': `Bearer ${sid}` }
+    });
+    if (!res.ok) continue;
+    const json = await res.json();
+    const body = json.records?.[0]?.Body;
+    if (body) {
+      apexSourceCache[cacheKey] = body;
+      return body;
+    }
+  }
+  apexSourceCache[cacheKey] = null;
+  return null;
 }
