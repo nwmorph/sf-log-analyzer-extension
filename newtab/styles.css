@@ -529,6 +529,15 @@ button {
   cursor: pointer;
 }
 
+.narr-step[data-line-index]:hover .narr-content::after {
+  content: '→ View in timeline';
+  display: block;
+  font-size: 0.7rem;
+  color: var(--vscode-textLink-foreground);
+  margin-top: 3px;
+  opacity: 0.8;
+}
+
 /* Left column: step number + dot + connector */
 .narr-left {
   display: flex;

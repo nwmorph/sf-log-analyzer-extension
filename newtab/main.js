@@ -1183,9 +1183,28 @@ function attachInteractionHandlers() {
     btn.style.display = 'none';
   });
 
-  // Narrative step rows: remove pointer cursor (can't open editor)
+  // Narrative step rows: click → switch to Timeline and highlight matching span
   document.querySelectorAll('.narr-step[data-line-index]').forEach((el) => {
-    el.style.cursor = '';
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => {
+      const lineIndex = Number(el.getAttribute('data-line-index'));
+      // Switch to Timeline tab
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const timelineBtn = document.querySelector('.tab-btn[data-tab="timeline"]');
+      const timelinePanel = document.getElementById('tab-timeline');
+      if (timelineBtn) timelineBtn.classList.add('active');
+      if (timelinePanel) timelinePanel.classList.add('active');
+      // Find and highlight the matching segment in the timeline
+      setTimeout(() => {
+        const seg = document.querySelector(`.timeline-segment[data-line-index="${lineIndex}"]`);
+        if (seg) {
+          seg.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          seg.style.outline = '3px solid var(--vscode-focusBorder)';
+          setTimeout(() => { seg.style.outline = ''; }, 2000);
+        }
+      }, 100); // small delay to let the tab switch render
+    });
   });
 
   // Validation rule rows: keep tooltip but remove editor click
@@ -2412,12 +2431,28 @@ function renderNarrative(result) {
           : `${ruleCount} rules · all passed`;
       }
     } else if (s.type === 'flow') {
-      title = escapeHtml(s.name);
+      const flowName = s.name.replace(/^Flow:\s*/i, '');
+      title = escapeHtml(flowName);
+      subtitle = 'An automated process built in Flow Builder — runs declarative logic without Apex code.';
     } else if (s.type === 'dml') {
       title = escapeHtml(s.name);
-      subtitle = s.rows !== null ? `${s.rows} row${s.rows === 1 ? '' : 's'}` : '';
+      const rowPart = s.rows !== null ? ` · ${s.rows} row${s.rows === 1 ? '' : 's'}` : '';
+      subtitle = `Database write operation${rowPart}`;
     } else if (s.type === 'datasource') {
       title = escapeHtml(s.name.replace(/^ApexDataSource:\s*/i, ''));
+      subtitle = 'Custom Apex class that connects Salesforce to an external data source.';
+    } else if (s.type === 'code-unit') {
+      title = escapeHtml(s.name);
+      // Try to give a meaningful explanation for known code unit patterns
+      if (/^DuplicateDetector/i.test(s.name)) {
+        subtitle = 'Salesforce Duplicate Management — checks if this record matches existing duplicates based on your Duplicate Rules.';
+      } else if (/^Workflow/i.test(s.name)) {
+        subtitle = 'Workflow Rule — a legacy automation that can send emails, update fields, or trigger outbound messages.';
+      } else if (/^Process Builder/i.test(s.name)) {
+        subtitle = 'Process Builder automation — a legacy declarative automation, now largely replaced by Flow.';
+      } else {
+        subtitle = 'A unit of Apex or platform code execution.';
+      }
     } else {
       title = escapeHtml(s.name);
     }
