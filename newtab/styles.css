@@ -1898,6 +1898,35 @@ button {
   overflow: hidden;
 }
 
+.tl-overview-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tl-zoom-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.tl-zoom-btn {
+  padding: 1px 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 3px;
+  border: 1px solid var(--vscode-editorWidget-border);
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.1s;
+}
+
+.tl-zoom-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .tl-zoom-hint {
   font-size: 0.72rem;
   color: var(--vscode-descriptionForeground);

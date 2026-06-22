@@ -1081,12 +1081,25 @@ function renderTimeline(events, flowNames) {
       <div class="tl-filters">${filterBtns}${errFilterBtn}${debugFilterBtn}
         <button class="tl-filter-btn tl-filter-all active" data-filter="all">Show all</button>
       </div>
-      <div class="tl-overview-label">Overview <span class="tl-click-hint">— click a block to expand</span></div>
+      <div class="tl-overview-label">
+        Overview <span class="tl-click-hint">— click a block to expand</span>
+        <span class="tl-zoom-btns">
+          <button class="tl-zoom-btn" id="tl-zoom-in"  title="Zoom in (Ctrl+scroll)">+</button>
+          <button class="tl-zoom-btn" id="tl-zoom-out" title="Zoom out (Ctrl+scroll)">−</button>
+          <button class="tl-zoom-btn" id="tl-zoom-reset" title="Reset zoom">⊙</button>
+        </span>
+      </div>
       <div class="timeline-bar-row overview-row" style="height:40px;position:relative;">
         ${overviewSegsHtml}
       </div>
       <div class="tl-detail" id="tl-detail" style="display:none;">
-        <div class="tl-detail-label" id="tl-detail-label"></div>
+        <div class="tl-detail-label" id="tl-detail-label">
+          <span class="tl-zoom-btns">
+            <button class="tl-zoom-btn" id="tl-gantt-zoom-in"  title="Zoom in">+</button>
+            <button class="tl-zoom-btn" id="tl-gantt-zoom-out" title="Zoom out">−</button>
+            <button class="tl-zoom-btn" id="tl-gantt-zoom-reset" title="Reset zoom">⊙</button>
+          </span>
+        </div>
         <div class="tl-detail-scroll" id="tl-detail-scroll">
           ${ganttHtml}
         </div>
@@ -1430,6 +1443,11 @@ function attachInteractionHandlers() {
       zoom = 1; pan = 0; applyZoom();
     });
 
+    // Zoom buttons (work on all platforms including Windows)
+    document.getElementById('tl-zoom-in')?.addEventListener('click', () => zoomToward(1.5, 0.5));
+    document.getElementById('tl-zoom-out')?.addEventListener('click', () => zoomToward(0.67, 0.5));
+    document.getElementById('tl-zoom-reset')?.addEventListener('click', () => { zoom = 1; pan = 0; applyZoom(); });
+
     // ── Pinch-to-zoom on the gantt detail panel ───────────────────────────
     const ganttDetail  = document.getElementById('tl-detail');
     const ganttScroll  = document.getElementById('tl-detail-scroll');
@@ -1470,6 +1488,14 @@ function attachInteractionHandlers() {
         ganttZoom = 1;
         ganttScroll.style.width = '';
         ganttDetail.scrollLeft = 0;
+        if (ganttHint) ganttHint.style.display = 'none';
+      });
+
+      // Gantt zoom buttons
+      document.getElementById('tl-gantt-zoom-in')?.addEventListener('click',    () => applyGanttZoom(1.5,  0.5));
+      document.getElementById('tl-gantt-zoom-out')?.addEventListener('click',   () => applyGanttZoom(0.67, 0.5));
+      document.getElementById('tl-gantt-zoom-reset')?.addEventListener('click', () => {
+        ganttZoom = 1; ganttScroll.style.width = ''; ganttDetail.scrollLeft = 0;
         if (ganttHint) ganttHint.style.display = 'none';
       });
     }
