@@ -809,7 +809,7 @@ function classifyCodeUnitName(rawName) {
 
 // Original bright colours for dark mode; darker shades for light mode readability
 const PHASE_COLORS_DARK  = { 'before-trigger':'#3ca0c8','after-trigger':'#e07b39','validation':'#f0c040','flow':'#9b7fe8','trigger':'#4a9eff','soql':'#2eb87e','dml':'#aa96da','datasource':'#5ca0c8','method':'#4a9eff','system-method':'#4ecdc4','workflow':'#c8a050','other':'#666' };
-const PHASE_COLORS_LIGHT = { 'before-trigger':'#0077aa','after-trigger':'#c05a1a','validation':'#8a6200','flow':'#6040c0','trigger':'#0057cc','soql':'#006e44','dml':'#5040a0','datasource':'#004f88','method':'#0057cc','system-method':'#007a72','workflow':'#7a5a00','other':'#555' };
+const PHASE_COLORS_LIGHT = { 'before-trigger':'#1a8bbf','after-trigger':'#d4621a','validation':'#b8860b','flow':'#7b5ea7','trigger':'#1a6fcc','soql':'#1a9960','dml':'#7060b8','datasource':'#1a78aa','method':'#1a6fcc','system-method':'#1a9990','workflow':'#a07820','other':'#666' };
 
 function phaseColor(type) {
   const isLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1090,7 +1090,7 @@ function renderTimeline(events, flowNames) {
         <div class="tl-detail-scroll" id="tl-detail-scroll">
           ${ganttHtml}
         </div>
-        <div class="tl-zoom-hint" id="tl-gantt-zoom-hint" style="display:none;">Pinch or Ctrl+scroll to zoom · Scroll to pan · Double-click to reset</div>
+        <div class="tl-zoom-hint" id="tl-gantt-zoom-hint" style="display:none;">Pinch or Ctrl+scroll to zoom · Two-finger scroll to pan · Double-click to reset</div>
       </div>
       ${errorEvents.length > 0 ? `<div class="tl-event-group tl-event-group-errors"><div class="tl-points-label tl-points-label-error">Errors &amp; Exceptions (${errorEvents.length})</div>${renderPointStrip(errorEvents, timelineStart, totalMs, firstNanosRef)}</div>` : ''}
       ${debugEvents.length > 0 ? `<div class="tl-event-group tl-event-group-debug"><div class="tl-points-label">Debug statements (${debugEvents.length})</div>${renderPointStrip(debugEvents, timelineStart, totalMs, firstNanosRef)}</div>` : ''}
