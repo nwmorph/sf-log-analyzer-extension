@@ -3020,6 +3020,7 @@ body {
   font-size: 0.78rem;
   flex: 1;
   overflow-y: auto;
+  table-layout: fixed;
 }
 
 .log-table thead th {
@@ -3040,11 +3041,11 @@ body {
   padding-left: 10px;
 }
 
-.log-table thead th:nth-child(1) { width: 90px; max-width: 90px; }
-.log-table thead th:nth-child(2) { width: 120px; max-width: 120px; }
-.log-table thead th:nth-child(3) { width: 120px; }
-.log-table thead th:nth-child(4) { width: 60px; text-align: right; }
-.log-table thead th:nth-child(5) { width: 30px; }
+.log-table thead th:nth-child(1) { width: 25%; }
+.log-table thead th:nth-child(2) { width: 30%; }
+.log-table thead th:nth-child(3) { width: 30%; }
+.log-table thead th:nth-child(4) { width: 12%; text-align: right; }
+.log-table thead th:nth-child(5) { width: 3%; }
 
 .log-table thead th.sortable {
   cursor: pointer;
@@ -3108,11 +3109,11 @@ body {
   padding-left: 10px;
 }
 
-.log-cell-user { width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.log-cell-op   { width: 120px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-descriptionForeground); }
-.log-cell-time { width: 120px; white-space: nowrap; color: var(--vscode-descriptionForeground); }
-.log-cell-size { width: 60px; white-space: nowrap; text-align: right; color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; }
-.log-cell-delete { width: 30px; text-align: center; }
+.log-cell-user { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-cell-op   { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-descriptionForeground); }
+.log-cell-time { white-space: nowrap; color: var(--vscode-descriptionForeground); }
+.log-cell-size { white-space: nowrap; text-align: right; color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; }
+.log-cell-delete { text-align: center; }
 
 .log-delete-btn {
   background: none;
