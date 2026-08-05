@@ -77,6 +77,17 @@ async function populateOrgSwitcher() {
     // Reset state for the new org
     lastLogs = [];
     updateOrgDisplay(appOrgUrl);
+    // Clear currently displayed log
+    const summarySection = document.getElementById('summary');
+    if (summarySection) {
+      summarySection.classList.add('empty');
+      summarySection.innerHTML = `
+        <div class="placeholder">
+          <h2>No log selected</h2>
+          <p>Select a log from the list on the left to analyse it.</p>
+        </div>
+      `;
+    }
     // Reload logs for the new org
     loadLogList();
   });
@@ -89,25 +100,28 @@ async function loadLogList() {
   const stateEl = document.getElementById('log-list-state');
   const tableEl = document.getElementById('log-table');
 
-  // First try: query open tabs directly — more reliable than waiting for content script
-  const sfOrgPattern = /https:\/\/[^/]+(\.salesforce\.com|\.force\.com|\.lightning\.force\.com|\.my\.salesforce\.com)(\/|$)/;
-  const allTabs = await chrome.tabs.query({});
-  const sfTab = allTabs.find(t => t.url && sfOrgPattern.test(t.url));
-  if (sfTab) {
-    try {
-      const origin = new URL(sfTab.url).origin;
-      appOrgUrl = origin;
-      await chrome.storage.session.set({ orgUrl: origin });
-      updateOrgDisplay(origin);
-    } catch {}
-  }
-
-  // Second try: fall back to session storage
+  // Only auto-detect org if we don't already have one
   if (!appOrgUrl) {
-    const stored = await chrome.storage.session.get('orgUrl');
-    if (stored.orgUrl) {
-      appOrgUrl = stored.orgUrl;
-      updateOrgDisplay(stored.orgUrl);
+    // First try: query open tabs directly — more reliable than waiting for content script
+    const sfOrgPattern = /https:\/\/[^/]+(\.salesforce\.com|\.force\.com|\.lightning\.force\.com|\.my\.salesforce\.com)(\/|$)/;
+    const allTabs = await chrome.tabs.query({});
+    const sfTab = allTabs.find(t => t.url && sfOrgPattern.test(t.url));
+    if (sfTab) {
+      try {
+        const origin = new URL(sfTab.url).origin;
+        appOrgUrl = origin;
+        await chrome.storage.session.set({ orgUrl: origin });
+        updateOrgDisplay(origin);
+      } catch {}
+    }
+
+    // Second try: fall back to session storage
+    if (!appOrgUrl) {
+      const stored = await chrome.storage.session.get('orgUrl');
+      if (stored.orgUrl) {
+        appOrgUrl = stored.orgUrl;
+        updateOrgDisplay(stored.orgUrl);
+      }
     }
   }
 
