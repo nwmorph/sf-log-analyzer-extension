@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot/src/commands\" \"/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot/src/salesforce\" \"/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot/src/utils\")",
+      "Bash(mkdir -p \"/Users/nwaller/Documents/Private/Slack Extensions\")",
+      "Bash(mv \"/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot\" \"/Users/nwaller/Documents/Private/Slack Extensions/sf-slack-bot\")"
+    ],
+    "additionalDirectories": [
+      "/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot/src",
+      "/Users/nwaller/Documents/Private/Chrome Extensions/sf-slack-bot"
+    ]
+  }
+}

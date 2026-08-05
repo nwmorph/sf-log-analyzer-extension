@@ -41,34 +41,23 @@ async function detectAICapability(orgUrl) {
     return aiCapability;
   }
 
-  // 1. Try Einstein API
-  if (aiSettings.preferEinstein && orgUrl) {
+  // Try Einstein API (if org URL available)
+  if (orgUrl) {
     try {
       const hasEinstein = await checkEinsteinAPI(orgUrl);
       if (hasEinstein) {
         aiCapability = 'einstein';
+        console.log('[AI] Einstein API detected');
         return aiCapability;
       }
     } catch (e) {
-      console.log('[AI] Einstein check failed:', e.message);
+      console.log('[AI] Einstein not available:', e.message);
     }
   }
 
-  // 2. Try Chrome Built-in AI
-  if ('ai' in window && 'summarizer' in window.ai) {
-    try {
-      const canSummarize = await window.ai.summarizer.capabilities();
-      if (canSummarize && canSummarize.available !== 'no') {
-        aiCapability = 'chrome-ai';
-        return aiCapability;
-      }
-    } catch (e) {
-      console.log('[AI] Chrome AI check failed:', e.message);
-    }
-  }
-
-  // 3. Fallback to rule-based
+  // Fallback to rule-based
   aiCapability = 'rule-based';
+  console.log('[AI] Using rule-based summaries');
   return aiCapability;
 }
 
@@ -101,8 +90,6 @@ async function generateAISummary(result, orgUrl) {
   try {
     if (capability === 'einstein') {
       text = await generateEinsteinSummary(summaryData, orgUrl);
-    } else if (capability === 'chrome-ai') {
-      text = await generateChromeAISummary(summaryData);
     } else {
       text = generateRuleBasedSummary(summaryData);
     }
@@ -148,13 +135,7 @@ async function generateEinsteinSummary(data, orgUrl) {
   return resp.text;
 }
 
-async function generateChromeAISummary(data) {
-  const prompt = buildPromptForSummary(data);
-  const summarizer = await window.ai.summarizer.create();
-  const text = await summarizer.summarize(prompt);
-  summarizer.destroy();
-  return text;
-}
+// Chrome AI removed - using Einstein or rule-based only
 
 function generateRuleBasedSummary(data) {
   // Enhanced rule-based summary with better context awareness
@@ -261,15 +242,13 @@ function renderAISummary(containerId, result, orgUrl) {
   // Generate summary asynchronously
   generateAISummary(result, orgUrl).then(summary => {
     const providerLabel = {
-      'einstein': 'Einstein AI',
-      'chrome-ai': 'Chrome AI',
-      'rule-based': 'Analysis'
-    }[summary.provider] || 'Analysis';
+      'einstein': 'Einstein AI Summary',
+      'rule-based': 'Overview'
+    }[summary.provider] || 'Overview';
 
     const providerPrivacy = {
-      'einstein': 'Using Einstein AI from your org',
-      'chrome-ai': 'Using Chrome built-in AI (on-device, private)',
-      'rule-based': 'Rule-based analysis'
+      'einstein': '🔒 Powered by Einstein AI in your org',
+      'rule-based': ''
     }[summary.provider] || '';
 
     container.innerHTML = `

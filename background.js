@@ -251,60 +251,140 @@ async function getValidationRuleDescription(orgUrl, ruleName, objectName) {
 // ── Einstein AI API ────────────────────────────────────────────────────────
 
 async function checkEinsteinAPI(orgUrl) {
-  // Check if Einstein/Agentforce Models API is available in this org
-  // Try a simple query to see if we have access
+  // Check if Einstein/Agentforce LLM API is available
+  // Try multiple detection strategies
   try {
     const sid = await getSessionToken(orgUrl);
     const apiUrl = toApiUrl(orgUrl);
 
-    // Check if the org has Einstein by querying Organization object
-    const q = encodeURIComponent(`SELECT IsSandbox FROM Organization LIMIT 1`);
-    const res = await fetch(`${apiUrl}/services/data/${API_VERSION}/query/?q=${q}`, {
-      headers: { 'Authorization': `Bearer ${sid}` }
-    });
+    // Strategy 1: Try to access Einstein LLM endpoint directly (HEAD request)
+    const testEndpoints = [
+      `/services/data/${API_VERSION}/einstein/llm/chat`,
+      `/services/data/${API_VERSION}/ai/models`,
+      `/services/einstein/v2/language`
+    ];
 
-    if (!res.ok) return false;
+    for (const endpoint of testEndpoints) {
+      try {
+        const res = await fetch(`${apiUrl}${endpoint}`, {
+          method: 'HEAD',
+          headers: { 'Authorization': `Bearer ${sid}` }
+        });
+        // 200 or 405 (Method Not Allowed) means endpoint exists
+        // 404 means not available
+        if (res.status === 200 || res.status === 405) {
+          console.log(`[Einstein] Found endpoint: ${endpoint}`);
+          return true;
+        }
+      } catch (e) {
+        // Continue to next endpoint
+      }
+    }
 
-    // For now, assume Einstein API might be available if we have API access
-    // A proper check would involve testing the actual Einstein endpoint
-    // but that requires knowing the exact endpoint structure
-    // For MVP, we'll return false and rely on Chrome AI fallback
-    return false; // TODO: Implement proper Einstein API detection
+    // Strategy 2: Query for Einstein-related objects
+    try {
+      const queries = [
+        `SELECT Id FROM AIApplication LIMIT 1`,
+        `SELECT Id FROM MLModel LIMIT 1`,
+        `SELECT Id FROM PromptAction LIMIT 1`
+      ];
+
+      for (const query of queries) {
+        const q = encodeURIComponent(query);
+        const res = await fetch(`${apiUrl}/services/data/${API_VERSION}/tooling/query/?q=${q}`, {
+          headers: { 'Authorization': `Bearer ${sid}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.totalSize !== undefined) {
+            console.log(`[Einstein] Detected via Tooling API query: ${query}`);
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      // Tooling queries failed, continue
+    }
+
+    // No Einstein detected
+    console.log('[Einstein] Not available in this org');
+    return false;
   } catch (e) {
+    console.error('[Einstein] Detection error:', e);
     return false;
   }
 }
 
 async function generateEinsteinSummary(orgUrl, prompt) {
-  // Generate a summary using Einstein/Agentforce Models API
+  // Generate a summary using Einstein/Agentforce LLM API
   const sid = await getSessionToken(orgUrl);
   const apiUrl = toApiUrl(orgUrl);
 
-  // Einstein Copilot / Models API endpoint (this is a placeholder)
-  // The actual endpoint path needs to be verified in Einstein documentation
-  const url = `${apiUrl}/services/data/${API_VERSION}/einstein/llm/chat/completions`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${sid}`,
-      'Content-Type': 'application/json'
+  // Try multiple potential Einstein endpoints
+  const endpoints = [
+    {
+      url: `/services/data/${API_VERSION}/einstein/llm/chat/completions`,
+      body: {
+        model: 'sfdc_ai__DefaultGPT4Model',
+        messages: [
+          { role: 'system', content: 'You are a Salesforce debug log analyzer. Provide concise summaries in 2-3 sentences.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200
+      }
     },
-    body: JSON.stringify({
-      model: 'gpt-4', // or Einstein model name
-      messages: [
-        { role: 'system', content: 'You are a Salesforce debug log analyzer. Provide concise summaries in 2-3 sentences.' },
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 200
-    })
-  });
+    {
+      url: `/services/data/${API_VERSION}/einstein/llm/chat`,
+      body: {
+        prompt,
+        systemPrompt: 'You are a Salesforce debug log analyzer. Provide concise summaries in 2-3 sentences.',
+        maxTokens: 200
+      }
+    },
+    {
+      url: `/services/einstein/v2/language`,
+      body: {
+        document: prompt,
+        numResults: 1
+      }
+    }
+  ];
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Einstein API error ${res.status}: ${text.substring(0, 200)}`);
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(`${apiUrl}${endpoint.url}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sid}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(endpoint.body)
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        // Try multiple response formats
+        const text = json.choices?.[0]?.message?.content
+                  || json.generations?.[0]?.text
+                  || json.text
+                  || json.response
+                  || json.output;
+
+        if (text) {
+          console.log(`[Einstein] Success with endpoint: ${endpoint.url}`);
+          return text;
+        }
+      } else if (res.status !== 404) {
+        // Log non-404 errors for debugging
+        const errorText = await res.text();
+        console.log(`[Einstein] ${endpoint.url} returned ${res.status}: ${errorText.substring(0, 100)}`);
+      }
+    } catch (e) {
+      lastError = e;
+    }
   }
 
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content || json.text || 'Summary unavailable';
+  throw new Error(lastError?.message || 'All Einstein endpoints failed');
 }
