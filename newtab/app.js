@@ -6,7 +6,7 @@ let viewedLogIds = new Set(); // Track which logs have been viewed
 let logSortColumn = 'time';
 let logSortDirection = 'desc';
 let nextRecordsUrl = null; // For QueryMore pagination
-let pageSize = 200; // Default page size
+let pageSize = 50; // Default page size
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
