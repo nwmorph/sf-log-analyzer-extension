@@ -3079,6 +3079,10 @@ body {
 
 .log-row:hover { background: var(--vscode-list-hoverBackground); }
 
+.log-row-unread {
+  background: color-mix(in srgb, var(--vscode-focusBorder) 8%, transparent);
+}
+
 .log-row-unread td:first-child {
   border-left: 3px solid var(--vscode-focusBorder);
 }
