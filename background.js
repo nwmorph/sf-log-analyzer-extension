@@ -63,6 +63,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
+
+  if (message.type === 'checkEinstein') {
+    checkEinsteinAPI(message.orgUrl)
+      .then(available => sendResponse({ ok: true, available }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'generateEinsteinSummary') {
+    generateEinsteinSummary(message.orgUrl, message.prompt)
+      .then(text => sendResponse({ ok: true, text }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
 });
 
 function toApiUrl(orgUrl) {
@@ -232,4 +246,65 @@ async function getValidationRuleDescription(orgUrl, ruleName, objectName) {
     if (e.message === 'ACCESS_DENIED') return null;
     return null;
   }
+}
+
+// ── Einstein AI API ────────────────────────────────────────────────────────
+
+async function checkEinsteinAPI(orgUrl) {
+  // Check if Einstein/Agentforce Models API is available in this org
+  // Try a simple query to see if we have access
+  try {
+    const sid = await getSessionToken(orgUrl);
+    const apiUrl = toApiUrl(orgUrl);
+
+    // Check if the org has Einstein by querying Organization object
+    const q = encodeURIComponent(`SELECT IsSandbox FROM Organization LIMIT 1`);
+    const res = await fetch(`${apiUrl}/services/data/${API_VERSION}/query/?q=${q}`, {
+      headers: { 'Authorization': `Bearer ${sid}` }
+    });
+
+    if (!res.ok) return false;
+
+    // For now, assume Einstein API might be available if we have API access
+    // A proper check would involve testing the actual Einstein endpoint
+    // but that requires knowing the exact endpoint structure
+    // For MVP, we'll return false and rely on Chrome AI fallback
+    return false; // TODO: Implement proper Einstein API detection
+  } catch (e) {
+    return false;
+  }
+}
+
+async function generateEinsteinSummary(orgUrl, prompt) {
+  // Generate a summary using Einstein/Agentforce Models API
+  const sid = await getSessionToken(orgUrl);
+  const apiUrl = toApiUrl(orgUrl);
+
+  // Einstein Copilot / Models API endpoint (this is a placeholder)
+  // The actual endpoint path needs to be verified in Einstein documentation
+  const url = `${apiUrl}/services/data/${API_VERSION}/einstein/llm/chat/completions`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${sid}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4', // or Einstein model name
+      messages: [
+        { role: 'system', content: 'You are a Salesforce debug log analyzer. Provide concise summaries in 2-3 sentences.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 200
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Einstein API error ${res.status}: ${text.substring(0, 200)}`);
+  }
+
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content || json.text || 'Summary unavailable';
 }

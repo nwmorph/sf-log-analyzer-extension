@@ -18,6 +18,305 @@ let currentExecutedClasses = [];
 let currentScanFindings = [];
 let currentStaticFindings = null;
 
+// ── AI Summary State ─────────────────────────────────────────────────────────
+let aiCapability = null; // 'einstein' | 'chrome-ai' | 'rule-based' | null (not yet detected)
+let aiSummaryCache = {}; // { logHash: { text, provider } }
+let aiSettings = { enabled: true, preferEinstein: true }; // user preferences
+
+// ── AI Capability Detection ──────────────────────────────────────────────────
+async function detectAICapability(orgUrl) {
+  // Return cached result if available
+  if (aiCapability !== null) return aiCapability;
+
+  // Check user settings first
+  try {
+    const stored = await chrome.storage.local.get(['aiSettings']);
+    if (stored.aiSettings) {
+      aiSettings = { ...aiSettings, ...stored.aiSettings };
+    }
+  } catch (e) { /* ignore */ }
+
+  if (!aiSettings.enabled) {
+    aiCapability = 'rule-based';
+    return aiCapability;
+  }
+
+  // 1. Try Einstein API
+  if (aiSettings.preferEinstein && orgUrl) {
+    try {
+      const hasEinstein = await checkEinsteinAPI(orgUrl);
+      if (hasEinstein) {
+        aiCapability = 'einstein';
+        return aiCapability;
+      }
+    } catch (e) {
+      console.log('[AI] Einstein check failed:', e.message);
+    }
+  }
+
+  // 2. Try Chrome Built-in AI
+  if ('ai' in window && 'summarizer' in window.ai) {
+    try {
+      const canSummarize = await window.ai.summarizer.capabilities();
+      if (canSummarize && canSummarize.available !== 'no') {
+        aiCapability = 'chrome-ai';
+        return aiCapability;
+      }
+    } catch (e) {
+      console.log('[AI] Chrome AI check failed:', e.message);
+    }
+  }
+
+  // 3. Fallback to rule-based
+  aiCapability = 'rule-based';
+  return aiCapability;
+}
+
+async function checkEinsteinAPI(orgUrl) {
+  // Check if Einstein/Agentforce Models API is available
+  // We'll try to query a simple endpoint to verify access
+  const resp = await chrome.runtime.sendMessage({
+    type: 'checkEinstein',
+    orgUrl
+  });
+  return resp && resp.ok && resp.available;
+}
+
+// ── AI Summary Generation ─────────────────────────────────────────────────────
+async function generateAISummary(result, orgUrl) {
+  const capability = await detectAICapability(orgUrl);
+
+  // Build input data for AI
+  const summaryData = buildSummaryData(result);
+  const logHash = hashString(JSON.stringify(summaryData));
+
+  // Check cache
+  if (aiSummaryCache[logHash]) {
+    return aiSummaryCache[logHash];
+  }
+
+  let text = '';
+  let provider = capability;
+
+  try {
+    if (capability === 'einstein') {
+      text = await generateEinsteinSummary(summaryData, orgUrl);
+    } else if (capability === 'chrome-ai') {
+      text = await generateChromeAISummary(summaryData);
+    } else {
+      text = generateRuleBasedSummary(summaryData);
+    }
+  } catch (e) {
+    console.error('[AI] Summary generation failed:', e);
+    // Fallback to rule-based
+    text = generateRuleBasedSummary(summaryData);
+    provider = 'rule-based';
+  }
+
+  const summary = { text, provider };
+  aiSummaryCache[logHash] = summary;
+  return summary;
+}
+
+function buildSummaryData(result) {
+  return {
+    duration: result.totalDurationMs,
+    codeUnits: result.codeUnitStarted,
+    methods: result.methodEntry,
+    errors: result.errors,
+    userDebug: result.userDebug,
+    execSteps: result.execSteps.map(s => ({ type: s.type, name: s.name })),
+    limits: Object.entries(result.limitData || {})
+      .filter(([, v]) => v && v.used > 0)
+      .map(([key, val]) => ({ name: key, used: val.used, max: val.max, pct: Math.round(val.used / val.max * 100) }))
+      .filter(l => l.pct >= 30), // only include significant usage
+    validationRules: result.validationRules.map(r => ({ name: r.name, result: r.result, object: r.object })),
+    failedRules: result.validationRules.filter(r => r.result === 'fail').length,
+    scanFindings: result.scanFindings.filter(f => f.severity === 'critical' || f.severity === 'high').length,
+    execCount: result.execCount
+  };
+}
+
+async function generateEinsteinSummary(data, orgUrl) {
+  const prompt = buildPromptForSummary(data);
+  const resp = await chrome.runtime.sendMessage({
+    type: 'generateEinsteinSummary',
+    orgUrl,
+    prompt
+  });
+  if (!resp || !resp.ok) throw new Error(resp?.error || 'Einstein API failed');
+  return resp.text;
+}
+
+async function generateChromeAISummary(data) {
+  const prompt = buildPromptForSummary(data);
+  const summarizer = await window.ai.summarizer.create();
+  const text = await summarizer.summarize(prompt);
+  summarizer.destroy();
+  return text;
+}
+
+function generateRuleBasedSummary(data) {
+  // Enhanced rule-based summary with better context awareness
+  const parts = [];
+
+  // What triggered it
+  const triggers = data.execSteps.filter(s => s.type === 'before-trigger' || s.type === 'after-trigger');
+  if (triggers.length > 0) {
+    const m = triggers[0].name.match(/on\s+(\S+)\s+trigger\s+event\s+(\S+)/i);
+    if (m) {
+      parts.push(`A **${m[2]}** operation on **${m[1]}** triggered this execution.`);
+    }
+  } else {
+    parts.push('This execution ran without a DML trigger.');
+  }
+
+  // What happened
+  const flows = data.execSteps.filter(s => s.type === 'flow').length;
+  const dmls = data.execSteps.filter(s => s.type === 'dml').length;
+  const callouts = data.execSteps.filter(s => s.type === 'datasource').length;
+  const summary = [];
+  if (flows > 0) summary.push(`${flows} flow${flows > 1 ? 's' : ''}`);
+  if (dmls > 0) summary.push(`${dmls} DML operation${dmls > 1 ? 's' : ''}`);
+  if (callouts > 0) summary.push(`${callouts} external callout${callouts > 1 ? 's' : ''}`);
+  if (summary.length > 0) {
+    parts.push(`It executed ${summary.join(', ')}.`);
+  }
+
+  // Performance & concerns
+  if (data.duration) {
+    const perf = data.duration < 1000 ? 'fast' : data.duration < 3000 ? 'moderate' : 'slow';
+    parts.push(`Total time: **${data.duration} ms** (${perf}).`);
+  }
+
+  // Critical issues
+  if (data.failedRules > 0) {
+    parts.push(`⚠️ **${data.failedRules} validation rule${data.failedRules > 1 ? 's' : ''} failed**.`);
+  }
+  if (data.errors > 0) {
+    parts.push(`⚠️ **${data.errors} error${data.errors > 1 ? 's' : ''} occurred**.`);
+  }
+
+  // Governor limits
+  const highLimits = data.limits.filter(l => l.pct >= 80);
+  if (highLimits.length > 0) {
+    parts.push(`⚠️ Governor limits: ${highLimits.map(l => `${l.name.replace('Number of ', '').replace('Maximum ', '')} at ${l.pct}%`).join(', ')}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function buildPromptForSummary(data) {
+  return `Summarize this Salesforce Apex debug log execution in 2-3 sentences for a developer:
+
+Duration: ${data.duration} ms
+Code units: ${data.codeUnits}
+Methods: ${data.methods}
+Errors: ${data.errors}
+
+Execution steps:
+${data.execSteps.slice(0, 10).map(s => `- ${s.type}: ${s.name}`).join('\n')}
+
+Governor limits (>30% usage):
+${data.limits.map(l => `- ${l.name}: ${l.used}/${l.max} (${l.pct}%)`).join('\n')}
+
+Validation rules: ${data.validationRules.length} total, ${data.failedRules} failed
+
+Focus on: what triggered the execution, what operations ran, performance concerns, and any errors or limit warnings.`;
+}
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
+// ── AI Summary UI Component ───────────────────────────────────────────────────
+function renderAISummary(containerId, result, orgUrl) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  // Show loading state
+  container.innerHTML = `
+    <div class="ai-summary-card loading">
+      <div class="ai-summary-header">
+        <span class="ai-summary-icon">🤖</span>
+        <span class="ai-summary-title">AI Summary</span>
+        <span class="ai-summary-badge">Beta</span>
+        <button class="ai-summary-settings" id="${containerId}-settings" title="Settings">⚙️</button>
+      </div>
+      <div class="ai-summary-body">
+        <div class="ai-summary-loading">
+          <div class="spinner"></div>
+          <span>Generating summary...</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Generate summary asynchronously
+  generateAISummary(result, orgUrl).then(summary => {
+    const providerLabel = {
+      'einstein': 'Einstein AI',
+      'chrome-ai': 'Chrome AI',
+      'rule-based': 'Analysis'
+    }[summary.provider] || 'Analysis';
+
+    const providerPrivacy = {
+      'einstein': 'Using Einstein AI from your org',
+      'chrome-ai': 'Using Chrome built-in AI (on-device, private)',
+      'rule-based': 'Rule-based analysis'
+    }[summary.provider] || '';
+
+    container.innerHTML = `
+      <div class="ai-summary-card">
+        <div class="ai-summary-header">
+          <span class="ai-summary-icon">🤖</span>
+          <span class="ai-summary-title">${providerLabel}</span>
+          <span class="ai-summary-badge">Beta</span>
+          <button class="ai-summary-settings" id="${containerId}-settings" title="Settings">⚙️</button>
+        </div>
+        <div class="ai-summary-body">${summary.text}</div>
+        ${providerPrivacy ? `<div class="ai-summary-footer">${providerPrivacy}</div>` : ''}
+      </div>
+    `;
+
+    // Attach settings button handler
+    const settingsBtn = document.getElementById(`${containerId}-settings`);
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => showAISettings());
+    }
+  }).catch(err => {
+    console.error('[AI] Summary generation error:', err);
+    container.innerHTML = `
+      <div class="ai-summary-card error">
+        <div class="ai-summary-header">
+          <span class="ai-summary-icon">🤖</span>
+          <span class="ai-summary-title">AI Summary</span>
+        </div>
+        <div class="ai-summary-body">Could not generate summary. ${err.message || ''}</div>
+      </div>
+    `;
+  });
+}
+
+function showAISettings() {
+  // Simple inline settings toggle for now
+  const enabled = aiSettings.enabled;
+  const newState = !enabled;
+
+  if (confirm(`AI summaries are currently ${enabled ? 'enabled' : 'disabled'}.\n\nWould you like to ${newState ? 'enable' : 'disable'} them?`)) {
+    aiSettings.enabled = newState;
+    chrome.storage.local.set({ aiSettings }).then(() => {
+      alert(`AI summaries ${newState ? 'enabled' : 'disabled'}. Refresh the log to see changes.`);
+    });
+  }
+}
+
 function renderLogSummary(text, label, orgUrl, mtime) {
   // Keep only non-empty lines so indices match the lineIndex values stored in parseLog
   currentLogLines = text.split(/\r?\n/).filter(l => l.length > 0);
@@ -115,6 +414,24 @@ function renderLogSummary(text, label, orgUrl, mtime) {
 
   // attach interaction handlers after content is rendered
   attachInteractionHandlers();
+
+  // Generate AI summaries asynchronously (non-blocking)
+  if (aiSettings.enabled) {
+    // Report tab overview
+    renderAISummary('rpt-ai-overview', result, orgUrl);
+    // Timeline tab narrative enhancement (add container first via DOM manipulation)
+    const timelineTab = document.getElementById('tab-timeline');
+    if (timelineTab) {
+      const whatHappenedSection = timelineTab.querySelector('.collapsible-section');
+      if (whatHappenedSection && whatHappenedSection.nextElementSibling) {
+        const aiContainer = document.createElement('div');
+        aiContainer.id = 'timeline-ai-summary';
+        aiContainer.style.marginBottom = '20px';
+        whatHappenedSection.parentNode.insertBefore(aiContainer, whatHappenedSection);
+        renderAISummary('timeline-ai-summary', result, orgUrl);
+      }
+    }
+  }
 }
 
 function parseNanos(line) {
@@ -2883,6 +3200,9 @@ function renderReport(result) {
 
   return `
   <div class="rpt-page">
+
+    <!-- AI Summary Overview -->
+    <div id="rpt-ai-overview"></div>
 
     <div class="rpt-section rpt-hero">
       <div class="rpt-verdict rpt-verdict-${verdictClass}">

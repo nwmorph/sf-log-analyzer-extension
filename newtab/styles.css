@@ -2903,6 +2903,24 @@ body {
   white-space: nowrap;
 }
 
+.org-switcher {
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--vscode-editorWidget-border);
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-editor-foreground);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.org-switcher:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
 .sidebar-controls {
   display: flex;
   align-items: center;

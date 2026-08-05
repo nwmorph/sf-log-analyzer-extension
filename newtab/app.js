@@ -6,6 +6,7 @@ let appOrgUrl = null;
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   // Always try to load logs on open — no need to press Refresh manually
+  await populateOrgSwitcher();
   loadLogList();
 
   document.getElementById('btn-refresh').addEventListener('click', () => {
@@ -34,6 +35,51 @@ function updateOrgDisplay(orgUrl) {
   } catch {
     el.textContent = orgUrl;
   }
+}
+
+// ── Org switcher ───────────────────────────────────────────────────────────
+async function populateOrgSwitcher() {
+  const SF_PATTERN = /^https:\/\/[^/]+\.(salesforce\.com|force\.com|lightning\.force\.com|my\.salesforce\.com)/;
+  const tabs = await chrome.tabs.query({});
+  const sfTabs = tabs.filter(t => t.url && SF_PATTERN.test(t.url));
+
+  // Deduplicate by origin
+  const seen = new Set();
+  const orgs = [];
+  sfTabs.forEach(t => {
+    try {
+      const origin = new URL(t.url).origin;
+      if (!seen.has(origin)) { seen.add(origin); orgs.push(origin); }
+    } catch { /* skip */ }
+  });
+
+  const select = document.getElementById('org-switcher');
+  if (!select) return;
+
+  if (orgs.length < 2) {
+    select.style.display = 'none';
+    return;
+  }
+
+  select.textContent = '';
+  orgs.forEach(origin => {
+    const opt = document.createElement('option');
+    opt.value = origin;
+    opt.textContent = origin.replace('https://', '').split('.')[0];
+    if (origin === appOrgUrl) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.style.display = '';
+
+  select.addEventListener('change', async () => {
+    appOrgUrl = select.value;
+    await chrome.storage.session.set({ orgUrl: appOrgUrl });
+    // Reset state for the new org
+    lastLogs = [];
+    updateOrgDisplay(appOrgUrl);
+    // Reload logs for the new org
+    loadLogList();
+  });
 }
 
 // ── Log list ──────────────────────────────────────────────────────────────

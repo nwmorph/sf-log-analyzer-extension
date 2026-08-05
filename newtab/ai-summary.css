@@ -1,0 +1,111 @@
+/* ── AI Summary Component Styles ───────────────────────────────────────── */
+
+.ai-summary-card {
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.ai-summary-card.loading {
+  min-height: 120px;
+}
+
+.ai-summary-card.error {
+  border-color: var(--vscode-terminalAnsiRed);
+  background: color-mix(in srgb, var(--vscode-terminalAnsiRed) 10%, transparent);
+}
+
+.ai-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ai-summary-icon {
+  font-size: 1.2rem;
+}
+
+.ai-summary-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
+.ai-summary-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+  color: var(--vscode-focusBorder);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ai-summary-settings {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  padding: 4px;
+}
+
+.ai-summary-settings:hover {
+  opacity: 1;
+}
+
+.ai-summary-body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--vscode-editor-foreground);
+}
+
+.ai-summary-body strong {
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
+.ai-summary-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  justify-content: center;
+  color: var(--vscode-descriptionForeground);
+}
+
+.ai-summary-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--vscode-editorWidget-border) 50%, transparent);
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-summary-footer::before {
+  content: '🔒';
+  font-size: 0.85rem;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--vscode-editorWidget-border);
+  border-top-color: var(--vscode-focusBorder);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
