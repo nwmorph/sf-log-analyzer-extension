@@ -52,7 +52,9 @@ No Salesforce CLI, no build tools, no installation of other extensions required.
 
 ## Installation
 
-This extension is not on the Chrome Web Store — it is installed directly from source. This is standard practice for internal developer tools and is called *sideloading*.
+> **Note:** This extension is currently installed via sideloading (developer mode), which is standard practice for internal tools during development. We are planning to publish it to the Chrome Web Store and Edge Add-ons store in the future for easier distribution and to work around enterprise browser policies.
+
+This extension is not yet on the Chrome Web Store — it is installed directly from source via *sideloading*:
 
 1. Download and unzip the [latest release](https://github.com/nwmorph/sf-log-analyzer-extension/releases/latest), **or** clone the repo:
    ```bash
@@ -63,7 +65,9 @@ This extension is not on the Chrome Web Store — it is installed directly from 
 4. Click **Load unpacked** and select the `sf-log-analyzer-extension` folder
 5. The SF Log Analyzer icon appears in your Chrome toolbar
 
-> Chrome may show a one-time banner saying *"You have extensions running in developer mode"* — this is expected for sideloaded extensions and is not a security concern for a tool you have installed yourself from source.
+> **Chrome may show a one-time banner saying *"You have extensions running in developer mode"*** — this is expected for sideloaded extensions and is not a security concern for a tool you have installed yourself from source.
+>
+> **Enterprise users:** If your organization has extension policies that block sideloading (common in Edge), this extension will not load until it's published to the official stores. Use Chrome in the meantime, or ask your IT team about extension allowlisting.
 
 To update, pull the latest changes (or replace the folder) and click **↺** on the extension card in `chrome://extensions`.
 
