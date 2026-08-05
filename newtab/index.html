@@ -39,6 +39,10 @@
         </label>
       </div>
 
+      <div class="sidebar-search">
+        <input type="text" id="log-search" class="sidebar-search-input" placeholder="Filter by user or operation..." />
+      </div>
+
       <div id="log-list-state" class="log-list-state">
         <div class="log-list-placeholder">
           <div class="placeholder-icon">🔍</div>
@@ -49,15 +53,21 @@
       <table class="log-table" id="log-table" style="display:none;">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Operation</th>
-            <th>Time</th>
-            <th>Size</th>
+            <th class="sortable" data-sort="user">User <span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="operation">Operation <span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="time">Time <span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="size">Size <span class="sort-icon"></span></th>
             <th></th>
           </tr>
         </thead>
         <tbody id="log-table-body"></tbody>
       </table>
+
+      <div class="sidebar-pagination" id="log-pagination" style="display:none;">
+        <button class="sidebar-btn" id="btn-prev-page" disabled>← Previous</button>
+        <span id="log-page-info">1-200</span>
+        <button class="sidebar-btn" id="btn-next-page" disabled>Next →</button>
+      </div>
     </aside>
 
     <div id="sidebar-resizer" class="sidebar-resizer"></div>

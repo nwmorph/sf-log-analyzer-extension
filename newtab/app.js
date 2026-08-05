@@ -3,6 +3,10 @@
 
 let appOrgUrl = null;
 let viewedLogIds = new Set(); // Track which logs have been viewed
+let logSearchTerm = '';
+let logSortColumn = 'time';
+let logSortDirection = 'desc';
+let nextRecordsUrl = null; // For QueryMore pagination
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,6 +26,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('chk-unread-only').addEventListener('change', () => {
     renderLogTable(lastLogs);
+  });
+
+  // Search filter
+  document.getElementById('log-search').addEventListener('input', (e) => {
+    logSearchTerm = e.target.value.toLowerCase();
+    renderLogTable(lastLogs);
+  });
+
+  // Column sorting
+  document.querySelectorAll('.log-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const sortBy = th.dataset.sort;
+      if (logSortColumn === sortBy) {
+        logSortDirection = logSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        logSortColumn = sortBy;
+        logSortDirection = 'desc';
+      }
+      renderLogTable(lastLogs);
+    });
+  });
+
+  // Pagination
+  document.getElementById('btn-next-page').addEventListener('click', () => {
+    if (nextRecordsUrl) loadMoreLogs();
+  });
+
+  document.getElementById('btn-prev-page').addEventListener('click', () => {
+    // Previous not implemented yet - would need to track page history
+    alert('Previous page navigation requires tracking history. Use Refresh to restart from the beginning.');
   });
 });
 
@@ -148,6 +182,8 @@ async function loadLogList() {
   }
 
   lastLogs = resp.data.records || [];
+  nextRecordsUrl = resp.data.nextRecordsUrl || null;
+
   if (lastLogs.length === 0) {
     setStateMessage(stateEl, '📭', 'No debug logs found. Generate some Apex activity first.');
     return;
@@ -155,7 +191,48 @@ async function loadLogList() {
 
   stateEl.style.display = 'none';
   tableEl.style.display = '';
+  updatePaginationUI();
   renderLogTable(lastLogs);
+}
+
+async function loadMoreLogs() {
+  if (!nextRecordsUrl) return;
+
+  const stateEl = document.getElementById('log-list-state');
+  setStateMessage(stateEl, '⏳', 'Loading more logs…');
+
+  const resp = await chrome.runtime.sendMessage({
+    type: 'fetchMoreLogs',
+    orgUrl: appOrgUrl,
+    nextRecordsUrl
+  });
+
+  if (!resp.ok) {
+    setStateMessage(stateEl, '⚠', 'Could not load more logs: ' + resp.error);
+    return;
+  }
+
+  const moreLogs = resp.data.records || [];
+  lastLogs = [...lastLogs, ...moreLogs];
+  nextRecordsUrl = resp.data.nextRecordsUrl || null;
+
+  stateEl.style.display = 'none';
+  updatePaginationUI();
+  renderLogTable(lastLogs);
+}
+
+function updatePaginationUI() {
+  const pagination = document.getElementById('log-pagination');
+  const nextBtn = document.getElementById('btn-next-page');
+  const pageInfo = document.getElementById('log-page-info');
+
+  if (lastLogs.length > 0) {
+    pagination.style.display = 'flex';
+    pageInfo.textContent = `${lastLogs.length} log${lastLogs.length === 1 ? '' : 's'}`;
+    nextBtn.disabled = !nextRecordsUrl;
+  } else {
+    pagination.style.display = 'none';
+  }
 }
 
 function setStateMessage(stateEl, icon, text) {
@@ -179,7 +256,57 @@ function renderLogTable(logs) {
 
   // Filter by unread status if checkbox is checked
   const unreadOnly = document.getElementById('chk-unread-only').checked;
-  const filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
+  let filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
+
+  // Filter by search term
+  if (logSearchTerm) {
+    filteredLogs = filteredLogs.filter(log => {
+      const user = (log.LogUser?.Name || '').toLowerCase();
+      const operation = (log.Operation || log.Request || '').toLowerCase();
+      return user.includes(logSearchTerm) || operation.includes(logSearchTerm);
+    });
+  }
+
+  // Sort logs
+  filteredLogs = [...filteredLogs].sort((a, b) => {
+    let aVal, bVal;
+    switch (logSortColumn) {
+      case 'user':
+        aVal = a.LogUser?.Name || '';
+        bVal = b.LogUser?.Name || '';
+        break;
+      case 'operation':
+        aVal = a.Operation || a.Request || '';
+        bVal = b.Operation || b.Request || '';
+        break;
+      case 'time':
+        aVal = a.StartTime ? new Date(a.StartTime).getTime() : 0;
+        bVal = b.StartTime ? new Date(b.StartTime).getTime() : 0;
+        break;
+      case 'size':
+        aVal = a.LogLength || 0;
+        bVal = b.LogLength || 0;
+        break;
+      default:
+        return 0;
+    }
+
+    if (aVal < bVal) return logSortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return logSortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Update sort indicators
+  document.querySelectorAll('.log-table th.sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (th.dataset.sort === logSortColumn) {
+      icon.textContent = logSortDirection === 'asc' ? '▲' : '▼';
+      th.classList.add('sorted');
+    } else {
+      icon.textContent = '';
+      th.classList.remove('sorted');
+    }
+  });
 
   filteredLogs.forEach(log => {
     const time = log.StartTime ? new Date(log.StartTime).toLocaleString(undefined, {

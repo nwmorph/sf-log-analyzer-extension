@@ -64,6 +64,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'fetchMoreLogs') {
+    fetchMoreLogs(message.orgUrl, message.nextRecordsUrl)
+      .then(data => sendResponse({ ok: true, data }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
 });
 
 function toApiUrl(orgUrl) {
@@ -114,6 +121,23 @@ async function fetchLogs(orgUrl) {
      LIMIT 200`
   );
   const url = `${orgUrl}/services/data/${API_VERSION}/tooling/query/?q=${query}`;
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${sid}`,
+      'Content-Type': 'application/json',
+    }
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text.substring(0, 200)}`);
+  }
+  return res.json();
+}
+
+async function fetchMoreLogs(orgUrl, nextRecordsUrl) {
+  const sid = await getSessionToken(orgUrl);
+  const apiUrl = toApiUrl(orgUrl);
+  const url = `${apiUrl}${nextRecordsUrl}`;
   const res = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${sid}`,

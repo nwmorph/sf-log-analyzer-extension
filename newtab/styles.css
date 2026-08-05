@@ -2959,6 +2959,46 @@ body {
   cursor: pointer;
 }
 
+.sidebar-search {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+}
+
+.sidebar-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 4px;
+  color: var(--vscode-editor-foreground);
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
+.sidebar-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px solid var(--vscode-editorWidget-border);
+  gap: 10px;
+}
+
+#log-page-info {
+  font-size: 0.78rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.sidebar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Log list */
 .log-list-state {
   flex: 1;
@@ -2999,6 +3039,26 @@ body {
   position: sticky;
   top: 0;
   background: var(--vscode-sideBar-background);
+}
+
+.log-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.log-table thead th.sortable:hover {
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-list-hoverBackground);
+}
+
+.log-table thead th.sorted {
+  color: var(--vscode-focusBorder);
+}
+
+.log-table thead th .sort-icon {
+  font-size: 0.7rem;
+  margin-left: 4px;
+  opacity: 0.8;
 }
 
 .log-row {
