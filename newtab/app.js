@@ -7,6 +7,7 @@ let logSearchTerm = '';
 let logSortColumn = 'time';
 let logSortDirection = 'desc';
 let nextRecordsUrl = null; // For QueryMore pagination
+let pageSize = 200; // Default page size
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -27,6 +28,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('chk-unread-only').addEventListener('change', () => {
     renderLogTable(lastLogs);
   });
+
+  // Page size selector
+  const pageSizeSelector = document.getElementById('page-size-selector');
+  if (pageSizeSelector) {
+    // Load saved page size
+    chrome.storage.local.get('pageSize').then(stored => {
+      if (stored.pageSize) {
+        pageSize = stored.pageSize;
+        pageSizeSelector.value = pageSize;
+      }
+    });
+
+    pageSizeSelector.addEventListener('change', (e) => {
+      pageSize = parseInt(e.target.value);
+      chrome.storage.local.set({ pageSize });
+      // Auto-reload with new page size
+      loadLogList();
+    });
+  }
 
   // Search filter
   const searchInput = document.getElementById('log-search');
@@ -185,7 +205,7 @@ async function loadLogList() {
   setStateMessage(stateEl, '⏳', 'Loading logs…');
   tableEl.style.display = 'none';
 
-  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogs', orgUrl: appOrgUrl });
+  const resp = await chrome.runtime.sendMessage({ type: 'fetchLogs', orgUrl: appOrgUrl, pageSize });
   if (!resp.ok) {
     setStateMessage(stateEl, '⚠', 'Could not load logs: ' + resp.error);
     return;

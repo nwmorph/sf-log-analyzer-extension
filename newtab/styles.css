@@ -2959,6 +2959,22 @@ body {
   cursor: pointer;
 }
 
+.sidebar-select {
+  padding: 4px 8px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 4px;
+  color: var(--vscode-editor-foreground);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sidebar-select:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
 .sidebar-search {
   padding: 8px 14px;
   border-bottom: 1px solid var(--vscode-editorWidget-border);

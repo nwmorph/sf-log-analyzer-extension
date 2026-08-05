@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle API requests from the new tab (needs to run in background to carry cookies)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'fetchLogs') {
-    fetchLogs(message.orgUrl)
+    fetchLogs(message.orgUrl, message.pageSize || 200)
       .then(data => sendResponse({ ok: true, data }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true; // keep channel open for async response
@@ -111,14 +111,14 @@ async function getSessionToken(orgUrl) {
   throw new Error('Not logged in to this Salesforce org, or session has expired. Please log in and try again.');
 }
 
-async function fetchLogs(orgUrl) {
+async function fetchLogs(orgUrl, pageSize = 200) {
   const sid = await getSessionToken(orgUrl);
   orgUrl = toApiUrl(orgUrl);
   const query = encodeURIComponent(
     `SELECT Id, LogUser.Name, Application, Operation, Request, StartTime, Status, LogLength, DurationMilliseconds
      FROM ApexLog
      ORDER BY StartTime DESC
-     LIMIT 200`
+     LIMIT ${pageSize}`
   );
   const url = `${orgUrl}/services/data/${API_VERSION}/tooling/query/?q=${query}`;
   const res = await fetch(url, {
