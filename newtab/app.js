@@ -2,9 +2,16 @@
 // Runs after main.js (which provides renderLogSummary, parseLog, etc.)
 
 let appOrgUrl = null;
+let viewedLogIds = new Set(); // Track which logs have been viewed
 
 // ── Startup ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // Load viewed log IDs from storage
+  const stored = await chrome.storage.local.get('viewedLogIds');
+  if (stored.viewedLogIds) {
+    viewedLogIds = new Set(stored.viewedLogIds);
+  }
+
   // Always try to load logs on open — no need to press Refresh manually
   await populateOrgSwitcher();
   loadLogList();
@@ -170,7 +177,11 @@ function renderLogTable(logs) {
   const tbody = document.getElementById('log-table-body');
   tbody.textContent = '';
 
-  logs.forEach(log => {
+  // Filter by unread status if checkbox is checked
+  const unreadOnly = document.getElementById('chk-unread-only').checked;
+  const filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
+
+  filteredLogs.forEach(log => {
     const time = log.StartTime ? new Date(log.StartTime).toLocaleString(undefined, {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     }) : '—';
@@ -184,6 +195,12 @@ function renderLogTable(logs) {
     tr.dataset.id = log.Id;
     tr.dataset.label = label;
     tr.title = log.Operation || '';
+
+    // Add unread indicator
+    const isUnread = !viewedLogIds.has(log.Id);
+    if (isUnread) {
+      tr.classList.add('log-row-unread');
+    }
 
     const cells = [user, op, time, size];
     const cellClasses = ['log-cell-user', 'log-cell-op', 'log-cell-time', 'log-cell-size'];
@@ -254,6 +271,10 @@ async function loadLog(logId, label) {
     summary.appendChild(errPh);
     return;
   }
+
+  // Mark log as viewed
+  viewedLogIds.add(logId);
+  chrome.storage.local.set({ viewedLogIds: Array.from(viewedLogIds) });
 
   renderLogSummary(resp.text, label, appOrgUrl, null);
 }

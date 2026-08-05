@@ -3008,6 +3008,21 @@ body {
 
 .log-row:hover { background: var(--vscode-list-hoverBackground); }
 
+.log-row-unread {
+  font-weight: 600;
+  position: relative;
+}
+
+.log-row-unread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--vscode-focusBorder);
+}
+
 .log-row-active {
   background: color-mix(in srgb, var(--vscode-focusBorder) 15%, transparent) !important;
 }
