@@ -274,13 +274,9 @@ function renderLogTable(logs) {
   const tbody = document.getElementById('log-table-body');
   tbody.textContent = '';
 
-  console.log('[DEBUG] renderLogTable called with', logs.length, 'logs');
-  console.log('[DEBUG] viewedLogIds:', viewedLogIds.size, 'viewed');
-
   // Filter by unread status if checkbox is checked
   const unreadOnly = document.getElementById('chk-unread-only')?.checked || false;
   let filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
-  console.log('[DEBUG] After unread filter:', filteredLogs.length);
 
   // Sort logs
   filteredLogs = [...filteredLogs].sort((a, b) => {
@@ -322,8 +318,6 @@ function renderLogTable(logs) {
       th.classList.remove('sorted');
     }
   });
-
-  console.log('[DEBUG] Final filtered logs to render:', filteredLogs.length);
 
   filteredLogs.forEach(log => {
     const time = log.StartTime ? new Date(log.StartTime).toLocaleString(undefined, {

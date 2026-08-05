@@ -9,6 +9,10 @@ A Chrome extension that connects directly to your authenticated Salesforce org, 
 - **Live log list** — fetches ApexLog records directly from the Salesforce Tooling API using your existing browser session
 - **One-click analysis** — select a log from the list and the full analyzer opens instantly
 - **Full analysis engine** — execution timeline, What Happened narrative, governor limits, validation rules, code scan, and report — the same engine as the VS Code extension
+- **Unread tracking** — visual indicators (bold text + blue highlight) for logs you haven't viewed yet
+- **Smart filtering** — "Unread only" mode to focus on new logs; logs automatically disappear as you read them
+- **Pagination** — configurable page size (25/50/100/200 logs) with Next button to load more via QueryMore API
+- **Column sorting** — click User, Operation, Time, or Size headers to sort ascending/descending
 - **Delete logs** — remove individual logs from the org directly from the UI
 - **No download needed** — the log body is fetched and analysed in memory
 - **Auto org detection** — detects which Salesforce org you're on and connects automatically
@@ -69,9 +73,14 @@ To update, pull the latest changes (or replace the folder) and click **↺** on 
 
 1. Log into a Salesforce org in any Chrome tab
 2. Click the **SF Log Analyzer** icon in the toolbar → a new tab opens
-3. Click **Refresh** — the log list loads from your current org
+3. The log list loads automatically from your current org
 4. Click any log row → the full analysis renders on the right
-5. Click **✕** on a row to delete that log from the org
+5. **Unread logs** are shown in bold with a blue highlight; they disappear when clicked if "Unread only" is checked
+6. Use the **page size dropdown** (25/50/100/200) to control how many logs load
+7. Click **Next** to load more logs via pagination
+8. Click column headers (User, Operation, Time, Size) to sort the list
+9. Click **✕** on a row to delete that log from the org
+10. Use **Refresh** to reload the log list from scratch
 
 ---
 
@@ -89,6 +98,9 @@ To update, pull the latest changes (or replace the folder) and click **↺** on 
 | Source file linking | ✓ | — |
 | Apex @description lookup | ✓ | — |
 | Live log list from org | — | ✓ |
+| Unread tracking | — | ✓ |
+| Pagination (QueryMore) | — | ✓ |
+| Column sorting | — | ✓ |
 | Delete logs | — | ✓ |
 | No download needed | — | ✓ |
 
