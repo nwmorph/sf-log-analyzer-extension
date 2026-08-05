@@ -25,8 +25,12 @@ let aiSettings = { enabled: true, preferEinstein: true }; // user preferences
 
 // ── AI Capability Detection ──────────────────────────────────────────────────
 async function detectAICapability(orgUrl) {
+  console.log('[DEBUG] detectAICapability called with:', orgUrl);
   // Return cached result if available
-  if (aiCapability !== null) return aiCapability;
+  if (aiCapability !== null) {
+    console.log('[DEBUG] Returning cached capability:', aiCapability);
+    return aiCapability;
+  }
 
   // Check user settings first
   try {
@@ -218,8 +222,12 @@ function hashString(str) {
 
 // ── AI Summary UI Component ───────────────────────────────────────────────────
 function renderAISummary(containerId, result, orgUrl) {
+  console.log('[DEBUG] renderAISummary called:', containerId, 'orgUrl:', orgUrl);
   const container = document.getElementById(containerId);
-  if (!container) return;
+  if (!container) {
+    console.log('[DEBUG] Container not found:', containerId);
+    return;
+  }
 
   // Show loading state
   container.innerHTML = `
@@ -395,7 +403,10 @@ function renderLogSummary(text, label, orgUrl, mtime) {
   attachInteractionHandlers();
 
   // Generate AI summaries asynchronously (non-blocking)
+  console.log('[DEBUG] AI settings:', aiSettings);
+  console.log('[DEBUG] About to render AI summaries, orgUrl:', orgUrl);
   if (aiSettings.enabled) {
+    console.log('[DEBUG] AI is enabled, rendering summaries...');
     // Report tab overview
     renderAISummary('rpt-ai-overview', result, orgUrl);
     // Timeline tab narrative enhancement (add container first via DOM manipulation)
