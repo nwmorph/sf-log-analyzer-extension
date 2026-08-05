@@ -3036,6 +3036,12 @@ body {
   background: var(--vscode-sideBar-background);
 }
 
+.log-table thead th:nth-child(1) { width: 90px; max-width: 90px; }
+.log-table thead th:nth-child(2) { width: 120px; max-width: 120px; }
+.log-table thead th:nth-child(3) { width: 120px; }
+.log-table thead th:nth-child(4) { width: 60px; text-align: right; }
+.log-table thead th:nth-child(5) { width: 30px; }
+
 .log-table thead th.sortable {
   cursor: pointer;
   user-select: none;
@@ -3079,6 +3085,7 @@ body {
 }
 
 .log-row-unread td {
+  font-weight: 600;
   color: var(--vscode-editor-foreground);
 }
 
@@ -3093,10 +3100,11 @@ body {
   vertical-align: middle;
 }
 
-.log-cell-user { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.log-cell-op   { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-descriptionForeground); }
-.log-cell-time { white-space: nowrap; color: var(--vscode-descriptionForeground); }
-.log-cell-size { white-space: nowrap; color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; }
+.log-cell-user { width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-cell-op   { width: 120px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-descriptionForeground); }
+.log-cell-time { width: 120px; white-space: nowrap; color: var(--vscode-descriptionForeground); }
+.log-cell-size { width: 60px; white-space: nowrap; text-align: right; color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; }
+.log-cell-delete { width: 30px; text-align: center; }
 
 .log-delete-btn {
   background: none;

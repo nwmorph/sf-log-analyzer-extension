@@ -357,6 +357,7 @@ function renderLogTable(logs) {
 
     // Delete button cell
     const tdDel = document.createElement('td');
+    tdDel.className = 'log-cell-delete';
     const delBtn = document.createElement('button');
     delBtn.className = 'log-delete-btn';
     delBtn.textContent = '✕';
