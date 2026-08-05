@@ -29,10 +29,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Search filter
-  document.getElementById('log-search').addEventListener('input', (e) => {
-    logSearchTerm = e.target.value.toLowerCase();
-    renderLogTable(lastLogs);
-  });
+  const searchInput = document.getElementById('log-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      logSearchTerm = e.target.value.toLowerCase();
+      renderLogTable(lastLogs);
+    });
+  }
 
   // Column sorting
   document.querySelectorAll('.log-table th.sortable').forEach(th => {
@@ -49,14 +52,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Pagination
-  document.getElementById('btn-next-page').addEventListener('click', () => {
-    if (nextRecordsUrl) loadMoreLogs();
-  });
+  const nextBtn = document.getElementById('btn-next-page');
+  const prevBtn = document.getElementById('btn-prev-page');
 
-  document.getElementById('btn-prev-page').addEventListener('click', () => {
-    // Previous not implemented yet - would need to track page history
-    alert('Previous page navigation requires tracking history. Use Refresh to restart from the beginning.');
-  });
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (nextRecordsUrl) loadMoreLogs();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      // Previous not implemented yet - would need to track page history
+      alert('Previous page navigation requires tracking history. Use Refresh to restart from the beginning.');
+    });
+  }
 });
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -254,17 +264,24 @@ function renderLogTable(logs) {
   const tbody = document.getElementById('log-table-body');
   tbody.textContent = '';
 
+  console.log('[DEBUG] renderLogTable called with', logs.length, 'logs');
+  console.log('[DEBUG] Search term:', logSearchTerm);
+  console.log('[DEBUG] viewedLogIds:', viewedLogIds.size, 'viewed');
+
   // Filter by unread status if checkbox is checked
-  const unreadOnly = document.getElementById('chk-unread-only').checked;
+  const unreadOnly = document.getElementById('chk-unread-only')?.checked || false;
   let filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
+  console.log('[DEBUG] After unread filter:', filteredLogs.length);
 
   // Filter by search term
   if (logSearchTerm) {
     filteredLogs = filteredLogs.filter(log => {
       const user = (log.LogUser?.Name || '').toLowerCase();
       const operation = (log.Operation || log.Request || '').toLowerCase();
-      return user.includes(logSearchTerm) || operation.includes(logSearchTerm);
+      const matches = user.includes(logSearchTerm) || operation.includes(logSearchTerm);
+      return matches;
     });
+    console.log('[DEBUG] After search filter:', filteredLogs.length);
   }
 
   // Sort logs
@@ -307,6 +324,8 @@ function renderLogTable(logs) {
       th.classList.remove('sorted');
     }
   });
+
+  console.log('[DEBUG] Final filtered logs to render:', filteredLogs.length);
 
   filteredLogs.forEach(log => {
     const time = log.StartTime ? new Date(log.StartTime).toLocaleString(undefined, {
