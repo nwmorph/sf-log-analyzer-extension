@@ -133,15 +133,6 @@ function renderSummary(containerId, result) {
     </div>
   `;
 }
-        <div class="ai-summary-header">
-          <span class="ai-summary-icon">🤖</span>
-          <span class="ai-summary-title">AI Summary</span>
-        </div>
-        <div class="ai-summary-body">Could not generate summary. ${err.message || ''}</div>
-      </div>
-    `;
-  });
-}
 
 function renderLogSummary(text, label, orgUrl, mtime) {
   // Keep only non-empty lines so indices match the lineIndex values stored in parseLog
@@ -206,7 +197,6 @@ function renderLogSummary(text, label, orgUrl, mtime) {
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="report">Report</button>
       <button class="tab-btn" data-tab="timeline">Timeline</button>
-      <button class="tab-btn" data-tab="scan">Code Scan ${result.scanFindings.filter(f => f.severity === 'critical').length > 0 ? `<span class="tab-badge tab-badge-critical">${result.scanFindings.filter(f => f.severity === 'critical').length}</span>` : result.scanFindings.length > 0 ? `<span class="tab-badge">${result.scanFindings.length}</span>` : ''}</button>
       <button class="tab-btn" data-tab="raw">Raw Log</button>
     </div>
 
@@ -216,10 +206,6 @@ function renderLogSummary(text, label, orgUrl, mtime) {
       ${collapsible('Governor Limits', renderGovernorLimits(result.limitData), false)}
       ${collapsible('Validation Rules', renderValidationRules(result.validationRules), false)}
       <div id="categoryDetails"></div>
-    </div>
-
-    <div class="tab-panel" id="tab-scan">
-      ${renderCodeScan(result)}
     </div>
 
     <div class="tab-panel active" id="tab-report">
@@ -2789,16 +2775,16 @@ function renderNBA(runtimeFindings, staticViolations) {
     return `<div class="rpt-nba-placeholder">
       <span class="rpt-nba-placeholder-icon">⚡</span>
       <div>
-        <strong>Run Code Scan for personalised recommendations</strong><br>
+        <strong>No actions required</strong><br>
         <span style="font-size:0.82rem;color:var(--vscode-descriptionForeground);">
-          Once you run the static analysis in the Code Scan tab, this section will show prioritised next best actions based on both runtime behaviour and code quality findings.
+          Runtime analysis found no significant issues or improvements needed.
         </span>
       </div>
     </div>`;
   }
 
   if (actions.length === 0) {
-    return `<div class="rpt-concern rpt-concern-good">✓ No actions required — runtime and static analysis found no significant issues.</div>`;
+    return `<div class="rpt-concern rpt-concern-good">✓ No actions required — runtime analysis found no significant issues.</div>`;
   }
 
   // Sort by priority then source (runtime first)
