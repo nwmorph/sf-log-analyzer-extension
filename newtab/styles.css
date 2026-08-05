@@ -3039,7 +3039,7 @@ body {
 
 .log-table thead th:first-child {
   padding-left: 8px;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
 }
 
 .log-table thead th:nth-child(1) { width: 25%; }
@@ -3074,13 +3074,13 @@ body {
 }
 
 .log-row td:first-child {
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
 }
 
 .log-row:hover { background: var(--vscode-list-hoverBackground); }
 
 .log-row-unread td:first-child {
-  border-left-color: var(--vscode-focusBorder);
+  border-left: 3px solid var(--vscode-focusBorder);
 }
 
 .log-row-unread td {
