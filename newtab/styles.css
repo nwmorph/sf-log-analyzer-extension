@@ -2975,27 +2975,6 @@ body {
   border-color: var(--vscode-focusBorder);
 }
 
-.sidebar-search {
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--vscode-editorWidget-border);
-}
-
-.sidebar-search-input {
-  width: 100%;
-  padding: 6px 10px;
-  background: var(--vscode-editorWidget-background);
-  border: 1px solid var(--vscode-editorWidget-border);
-  border-radius: 4px;
-  color: var(--vscode-editor-foreground);
-  font-size: 0.82rem;
-  font-family: inherit;
-}
-
-.sidebar-search-input:focus {
-  outline: none;
-  border-color: var(--vscode-focusBorder);
-}
-
 .sidebar-pagination {
   display: flex;
   align-items: center;

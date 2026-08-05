@@ -3,7 +3,6 @@
 
 let appOrgUrl = null;
 let viewedLogIds = new Set(); // Track which logs have been viewed
-let logSearchTerm = '';
 let logSortColumn = 'time';
 let logSortDirection = 'desc';
 let nextRecordsUrl = null; // For QueryMore pagination
@@ -45,15 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.storage.local.set({ pageSize });
       // Auto-reload with new page size
       loadLogList();
-    });
-  }
-
-  // Search filter
-  const searchInput = document.getElementById('log-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      logSearchTerm = e.target.value.toLowerCase();
-      renderLogTable(lastLogs);
     });
   }
 
@@ -285,24 +275,12 @@ function renderLogTable(logs) {
   tbody.textContent = '';
 
   console.log('[DEBUG] renderLogTable called with', logs.length, 'logs');
-  console.log('[DEBUG] Search term:', logSearchTerm);
   console.log('[DEBUG] viewedLogIds:', viewedLogIds.size, 'viewed');
 
   // Filter by unread status if checkbox is checked
   const unreadOnly = document.getElementById('chk-unread-only')?.checked || false;
   let filteredLogs = unreadOnly ? logs.filter(log => !viewedLogIds.has(log.Id)) : logs;
   console.log('[DEBUG] After unread filter:', filteredLogs.length);
-
-  // Filter by search term
-  if (logSearchTerm) {
-    filteredLogs = filteredLogs.filter(log => {
-      const user = (log.LogUser?.Name || '').toLowerCase();
-      const operation = (log.Operation || log.Request || '').toLowerCase();
-      const matches = user.includes(logSearchTerm) || operation.includes(logSearchTerm);
-      return matches;
-    });
-    console.log('[DEBUG] After search filter:', filteredLogs.length);
-  }
 
   // Sort logs
   filteredLogs = [...filteredLogs].sort((a, b) => {
