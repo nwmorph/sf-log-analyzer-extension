@@ -354,6 +354,7 @@ async function generateEinsteinSummary(orgUrl, prompt) {
 
   for (const endpoint of endpoints) {
     try {
+      console.log(`[Einstein] Trying endpoint: ${endpoint.url}`);
       const res = await fetch(`${apiUrl}${endpoint.url}`, {
         method: 'POST',
         headers: {
@@ -363,8 +364,11 @@ async function generateEinsteinSummary(orgUrl, prompt) {
         body: JSON.stringify(endpoint.body)
       });
 
+      console.log(`[Einstein] ${endpoint.url} returned status: ${res.status}`);
+
       if (res.ok) {
         const json = await res.json();
+        console.log(`[Einstein] Response body:`, json);
         // Try multiple response formats
         const text = json.choices?.[0]?.message?.content
                   || json.generations?.[0]?.text
@@ -375,13 +379,16 @@ async function generateEinsteinSummary(orgUrl, prompt) {
         if (text) {
           console.log(`[Einstein] Success with endpoint: ${endpoint.url}`);
           return text;
+        } else {
+          console.log(`[Einstein] Response OK but no text found in expected fields`);
         }
-      } else if (res.status !== 404) {
-        // Log non-404 errors for debugging
+      } else {
+        // Log ALL errors including 404
         const errorText = await res.text();
-        console.log(`[Einstein] ${endpoint.url} returned ${res.status}: ${errorText.substring(0, 100)}`);
+        console.log(`[Einstein] ${endpoint.url} returned ${res.status}: ${errorText.substring(0, 200)}`);
       }
     } catch (e) {
+      console.log(`[Einstein] ${endpoint.url} threw error:`, e.message);
       lastError = e;
     }
   }
