@@ -3036,6 +3036,10 @@ body {
   background: var(--vscode-sideBar-background);
 }
 
+.log-table thead th:first-child {
+  padding-left: 10px;
+}
+
 .log-table thead th:nth-child(1) { width: 90px; max-width: 90px; }
 .log-table thead th:nth-child(2) { width: 120px; max-width: 120px; }
 .log-table thead th:nth-child(3) { width: 120px; }
@@ -3098,6 +3102,10 @@ body {
   border-bottom: 1px solid color-mix(in srgb, var(--vscode-editorWidget-border) 40%, transparent);
   color: var(--vscode-editor-foreground);
   vertical-align: middle;
+}
+
+.log-row td:first-child {
+  padding-left: 10px;
 }
 
 .log-cell-user { width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
