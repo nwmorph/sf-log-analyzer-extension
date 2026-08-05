@@ -421,6 +421,9 @@ async function loadLog(logId, label) {
   viewedLogIds.add(logId);
   chrome.storage.local.set({ viewedLogIds: Array.from(viewedLogIds) });
 
+  // Re-render table to update unread status and remove from "Unread only" view
+  renderLogTable(lastLogs);
+
   renderLogSummary(resp.text, label, appOrgUrl, null);
 }
 
