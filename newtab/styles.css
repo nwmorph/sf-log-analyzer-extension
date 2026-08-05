@@ -3038,7 +3038,8 @@ body {
 }
 
 .log-table thead th:first-child {
-  padding-left: 10px;
+  padding-left: 8px;
+  border-left: 2px solid transparent;
 }
 
 .log-table thead th:nth-child(1) { width: 25%; }
@@ -3072,21 +3073,14 @@ body {
   transition: background 0.08s;
 }
 
-.log-row:hover { background: var(--vscode-list-hoverBackground); }
-
-.log-row-unread {
-  position: relative;
+.log-row td:first-child {
+  border-left: 2px solid transparent;
 }
 
-.log-row-unread::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--vscode-focusBorder);
-  opacity: 0.6;
+.log-row:hover { background: var(--vscode-list-hoverBackground); }
+
+.log-row-unread td:first-child {
+  border-left-color: var(--vscode-focusBorder);
 }
 
 .log-row-unread td {
@@ -3106,7 +3100,7 @@ body {
 }
 
 .log-row td:first-child {
-  padding-left: 10px;
+  padding-left: 6px;
 }
 
 .log-cell-user { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
