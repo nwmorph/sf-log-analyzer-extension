@@ -120,6 +120,18 @@ This Chrome extension shares the same analysis engine as the **[SF Log Analyzer 
 | Delete logs | — | ✓ |
 | No download needed | — | ✓ |
 
+**Use the Chrome extension when:**
+- You want to browse and analyze logs directly from your org
+- You don't want to download log files
+- You need to quickly check recent logs with unread tracking
+- You need to delete old logs to free up org storage
+
+**Use the VS Code extension when:**
+- You're actively developing Apex and want source file linking
+- You need static analysis via Salesforce Code Analyzer
+- You want to open downloaded log files from your filesystem
+- You prefer working within your IDE
+
 ---
 
 ## Project Structure
