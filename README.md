@@ -8,7 +8,9 @@ A Chrome extension that connects directly to your authenticated Salesforce org, 
 
 - **Live log list** — fetches ApexLog records directly from the Salesforce Tooling API using your existing browser session
 - **One-click analysis** — select a log from the list and the full analyzer opens instantly
-- **Full analysis engine** — execution timeline, What Happened narrative, governor limits, validation rules, code scan, and report — the same engine as the VS Code extension
+- **Full analysis engine** — execution timeline with zoom, What Happened narrative, governor limits, validation rules, code scan, rule-based intelligent summary, and report — the same engine as the VS Code extension
+- **Timeline zoom** — +/−/⊙ buttons for zooming on both overview and detail timelines; zoom respects active filter (zoom on SOQL shows only SOQL segments)
+- **Intelligent Overview** — automatic plain-English summary describing what triggered execution, operations performed, performance assessment, and critical issues
 - **Unread tracking** — visual indicators (bold text + blue highlight) for logs you haven't viewed yet
 - **Smart filtering** — "Unread only" mode to focus on new logs; logs automatically disappear as you read them
 - **Pagination** — configurable page size (25/50/100/200 logs) with Next button to load more via QueryMore API
@@ -90,17 +92,27 @@ To update, pull the latest changes (or replace the folder) and click **↺** on 
 
 ## What's included vs. the VS Code extension
 
+This Chrome extension shares the same analysis engine as the **[SF Log Analyzer VS Code extension](https://github.com/nwmorph/sf-log-analyzer)** but differs in how logs are accessed and what IDE-specific features are available.
+
 | Feature | VS Code | Chrome |
 |---|---|---|
+| **Analysis Features** | | |
 | Execution timeline + zoom | ✓ | ✓ |
+| Filter-aware zoom | ✓ | ✓ |
 | What Happened narrative | ✓ | ✓ |
 | Governor limits | ✓ | ✓ |
 | Validation rules | ✓ | ✓ |
-| Report tab | ✓ | ✓ |
+| Report tab (default) | ✓ | ✓ |
+| Raw Log tab | ✓ | ✓ |
+| Rule-based intelligent summary | ✓ | ✓ |
 | Runtime code scan | ✓ | ✓ |
+| Loading indicators | ✓ | ✓ |
+| **IDE/Editor Features** | | |
 | Static analysis (sf code-analyzer) | ✓ | — |
 | Source file linking | ✓ | — |
 | Apex @description lookup | ✓ | — |
+| **Log Access Features** | | |
+| Open from file | ✓ | — |
 | Live log list from org | — | ✓ |
 | Unread tracking | — | ✓ |
 | Pagination (QueryMore) | — | ✓ |
